@@ -30,20 +30,29 @@
 #include <linux/filter.h>
 
 #include "bpf_exp.yacc.h"
+#include "bpf_exp.flex.h"
 
 enum jmp_type { JTL, JFL, JKL };
 
-extern FILE *yyin;
-extern int yylineno;
-extern int yylex(void);
-extern void yyerror(const char *str);
+extern void yyerror(yyscan_t scanner, const char *str);
 
-extern void bpf_asm_compile(FILE *fp, bool cstyle);
 static void bpf_set_curr_instr(uint16_t op, uint8_t jt, uint8_t jf, uint32_t k);
 static void bpf_set_curr_label(char *label);
 static void bpf_set_jmp_label(char *label, enum jmp_type type);
 
 %}
+
+%code requires {
+#include <stdio.h>
+#include <stdbool.h>
+
+typedef void* yyscan_t;
+
+void bpf_asm_compile(FILE *fp, bool cstyle);
+}
+
+%define api.pure full
+%param {yyscan_t scanner}
 
 %union {
 	char *label;
@@ -527,9 +536,9 @@ static int bpf_find_insns_offset(const char *label)
 	return ret;
 }
 
-static void bpf_stage_1_insert_insns(void)
+static void bpf_stage_1_insert_insns(yyscan_t scanner)
 {
-	yyparse();
+	yyparse(scanner);
 }
 
 static void bpf_reduce_k_jumps(void)
@@ -644,10 +653,14 @@ static void bpf_destroy(void)
 
 void bpf_asm_compile(FILE *fp, bool cstyle)
 {
-	yyin = fp;
+	yyscan_t scanner;
+
+	yylex_init(&scanner);
+
+	yyset_in(fp, scanner);
 
 	bpf_init();
-	bpf_stage_1_insert_insns();
+	bpf_stage_1_insert_insns(scanner);
 	bpf_stage_2_reduce_labels();
 	bpf_destroy();
 
@@ -657,11 +670,11 @@ void bpf_asm_compile(FILE *fp, bool cstyle)
 		bpf_pretty_print();
 
 	if (fp != stdin)
-		fclose(yyin);
+		fclose(fp);
 }
 
-void yyerror(const char *str)
+void yyerror(yyscan_t scanner, const char *str)
 {
-	fprintf(stderr, "error: %s at line %d\n", str, yylineno);
+	fprintf(stderr, "error: %s at line %d\n", str, yyget_lineno(scanner));
 	exit(1);
 }

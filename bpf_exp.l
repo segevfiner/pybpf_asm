@@ -29,7 +29,7 @@
 
 #include "bpf_exp.yacc.h"
 
-extern void yyerror(const char *str);
+extern void yyerror(yyscan_t scanner, const char *str);
 
 %}
 
@@ -44,6 +44,9 @@ extern void yyerror(const char *str);
 %option 8bit
 %option caseless
 %option yylineno
+
+%option reentrant
+%option bison-bridge
 
 %%
 
@@ -84,67 +87,67 @@ extern void yyerror(const char *str);
 "#"?("len")	{ return K_PKT_LEN; }
 
 "#"?("proto")	{
-		yylval.number = SKF_AD_PROTOCOL;
+		yylval->number = SKF_AD_PROTOCOL;
 		return extension;
 	}
 "#"?("type")	{
-		yylval.number = SKF_AD_PKTTYPE;
+		yylval->number = SKF_AD_PKTTYPE;
 		return extension;
 	}
 "#"?("poff")	{
-		yylval.number = SKF_AD_PAY_OFFSET;
+		yylval->number = SKF_AD_PAY_OFFSET;
 		return extension;
 	}
 "#"?("ifidx")	{
-		yylval.number = SKF_AD_IFINDEX;
+		yylval->number = SKF_AD_IFINDEX;
 		return extension;
 	}
 "#"?("nla")	{
-		yylval.number = SKF_AD_NLATTR;
+		yylval->number = SKF_AD_NLATTR;
 		return extension;
 	}
 "#"?("nlan")	{
-		yylval.number = SKF_AD_NLATTR_NEST;
+		yylval->number = SKF_AD_NLATTR_NEST;
 		return extension;
 	}
 "#"?("mark")	{
-		yylval.number = SKF_AD_MARK;
+		yylval->number = SKF_AD_MARK;
 		return extension;
 	}
 "#"?("queue")	{
-		yylval.number = SKF_AD_QUEUE;
+		yylval->number = SKF_AD_QUEUE;
 		return extension;
 	}
 "#"?("hatype")	{
-		yylval.number = SKF_AD_HATYPE;
+		yylval->number = SKF_AD_HATYPE;
 		return extension;
 	}
 "#"?("rxhash")	{
-		yylval.number = SKF_AD_RXHASH;
+		yylval->number = SKF_AD_RXHASH;
 		return extension;
 	}
 "#"?("cpu")	{
-		yylval.number = SKF_AD_CPU;
+		yylval->number = SKF_AD_CPU;
 		return extension;
 	}
 "#"?("vlan_tci") {
-		yylval.number = SKF_AD_VLAN_TAG;
+		yylval->number = SKF_AD_VLAN_TAG;
 		return extension;
 	}
 "#"?("vlan_pr")	{
-		yylval.number = SKF_AD_VLAN_TAG_PRESENT;
+		yylval->number = SKF_AD_VLAN_TAG_PRESENT;
 		return extension;
 	}
 "#"?("vlan_avail") {
-		yylval.number = SKF_AD_VLAN_TAG_PRESENT;
+		yylval->number = SKF_AD_VLAN_TAG_PRESENT;
 		return extension;
 	}
 "#"?("vlan_tpid") {
-		yylval.number = SKF_AD_VLAN_TPID;
+		yylval->number = SKF_AD_VLAN_TPID;
 		return extension;
 	}
 "#"?("rand")	{
-		yylval.number = SKF_AD_RANDOM;
+		yylval->number = SKF_AD_RANDOM;
 		return extension;
 	}
 
@@ -164,23 +167,23 @@ extern void yyerror(const char *str);
 "&"		{ return '&'; }
 
 ([0][x][a-fA-F0-9]+) {
-			yylval.number = strtoul(yytext, NULL, 16);
+			yylval->number = strtoul(yytext, NULL, 16);
 			return number;
 		}
 ([0][b][0-1]+)	{
-			yylval.number = strtol(yytext + 2, NULL, 2);
+			yylval->number = strtol(yytext + 2, NULL, 2);
 			return number;
 		}
 (([0])|([-+]?[1-9][0-9]*)) {
-			yylval.number = strtol(yytext, NULL, 10);
+			yylval->number = strtol(yytext, NULL, 10);
 			return number;
 		}
 ([0][0-7]+)	{
-			yylval.number = strtol(yytext + 1, NULL, 8);
+			yylval->number = strtol(yytext + 1, NULL, 8);
 			return number;
 		}
 [a-zA-Z_][a-zA-Z0-9_]+ {
-			yylval.label = strdup(yytext);
+			yylval->label = strdup(yytext);
 			return label;
 		}
 
@@ -192,7 +195,7 @@ extern void yyerror(const char *str);
 
 .		{
 			printf("unknown character \'%s\'", yytext);
-			yyerror("lex unknown character");
+			yyerror(yyscanner, "lex unknown character");
 		}
 
 %%
