@@ -671,6 +671,8 @@ void bpf_asm_compile(FILE *fp, bool cstyle)
 	bpf_stage_2_reduce_labels(&parser);
 	bpf_destroy(&parser);
 
+	yylex_destroy(scanner);
+
 	if (cstyle)
 		bpf_pretty_print_c(&parser);
 	else
