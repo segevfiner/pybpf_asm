@@ -34,11 +34,17 @@
 
 enum jmp_type { JTL, JFL, JKL };
 
-extern void yyerror(yyscan_t scanner, const char *str);
+typedef struct yyparse_s {
+	int curr_instr;
+	struct sock_filter out[BPF_MAXINSNS];
+	char **labels, **labels_jt, **labels_jf, **labels_k;
+} *yyparse_t;
 
-static void bpf_set_curr_instr(uint16_t op, uint8_t jt, uint8_t jf, uint32_t k);
-static void bpf_set_curr_label(char *label);
-static void bpf_set_jmp_label(char *label, enum jmp_type type);
+extern void yyerror(yyscan_t scanner, yyparse_t parser, const char *str);
+
+static void bpf_set_curr_instr(yyparse_t parser, uint16_t op, uint8_t jt, uint8_t jf, uint32_t k);
+static void bpf_set_curr_label(yyparse_t parser, char *label);
+static void bpf_set_jmp_label(yyparse_t parser, char *label, enum jmp_type type);
 
 %}
 
@@ -47,12 +53,15 @@ static void bpf_set_jmp_label(char *label, enum jmp_type type);
 #include <stdbool.h>
 
 typedef void* yyscan_t;
+struct yyparse_s;
+typedef struct yyparse_s *yyparse_t;
 
 void bpf_asm_compile(FILE *fp, bool cstyle);
 }
 
 %define api.pure full
 %param {yyscan_t scanner}
+%parse-param {yyparse_t parser}
 
 %union {
 	char *label;
@@ -124,405 +133,401 @@ instr
 	;
 
 labelled
-	: label ':' { bpf_set_curr_label($1); }
+	: label ':' { bpf_set_curr_label(parser, $1); }
 	;
 
 ldb
 	: OP_LDB '[' 'x' '+' number ']' {
-		bpf_set_curr_instr(BPF_LD | BPF_B | BPF_IND, 0, 0, $5); }
+		bpf_set_curr_instr(parser, BPF_LD | BPF_B | BPF_IND, 0, 0, $5); }
 	| OP_LDB '[' '%' 'x' '+' number ']' {
-		bpf_set_curr_instr(BPF_LD | BPF_B | BPF_IND, 0, 0, $6); }
+		bpf_set_curr_instr(parser, BPF_LD | BPF_B | BPF_IND, 0, 0, $6); }
 	| OP_LDB '[' number ']' {
-		bpf_set_curr_instr(BPF_LD | BPF_B | BPF_ABS, 0, 0, $3); }
+		bpf_set_curr_instr(parser, BPF_LD | BPF_B | BPF_ABS, 0, 0, $3); }
 	| OP_LDB extension {
-		bpf_set_curr_instr(BPF_LD | BPF_B | BPF_ABS, 0, 0,
+		bpf_set_curr_instr(parser, BPF_LD | BPF_B | BPF_ABS, 0, 0,
 				   SKF_AD_OFF + $2); }
 	;
 
 ldh
 	: OP_LDH '[' 'x' '+' number ']' {
-		bpf_set_curr_instr(BPF_LD | BPF_H | BPF_IND, 0, 0, $5); }
+		bpf_set_curr_instr(parser, BPF_LD | BPF_H | BPF_IND, 0, 0, $5); }
 	| OP_LDH '[' '%' 'x' '+' number ']' {
-		bpf_set_curr_instr(BPF_LD | BPF_H | BPF_IND, 0, 0, $6); }
+		bpf_set_curr_instr(parser, BPF_LD | BPF_H | BPF_IND, 0, 0, $6); }
 	| OP_LDH '[' number ']' {
-		bpf_set_curr_instr(BPF_LD | BPF_H | BPF_ABS, 0, 0, $3); }
+		bpf_set_curr_instr(parser, BPF_LD | BPF_H | BPF_ABS, 0, 0, $3); }
 	| OP_LDH extension {
-		bpf_set_curr_instr(BPF_LD | BPF_H | BPF_ABS, 0, 0,
+		bpf_set_curr_instr(parser, BPF_LD | BPF_H | BPF_ABS, 0, 0,
 				   SKF_AD_OFF + $2); }
 	;
 
 ldi
 	: OP_LDI '#' number {
-		bpf_set_curr_instr(BPF_LD | BPF_IMM, 0, 0, $3); }
+		bpf_set_curr_instr(parser, BPF_LD | BPF_IMM, 0, 0, $3); }
 	| OP_LDI number {
-		bpf_set_curr_instr(BPF_LD | BPF_IMM, 0, 0, $2); }
+		bpf_set_curr_instr(parser, BPF_LD | BPF_IMM, 0, 0, $2); }
 	;
 
 ld
 	: OP_LD '#' number {
-		bpf_set_curr_instr(BPF_LD | BPF_IMM, 0, 0, $3); }
+		bpf_set_curr_instr(parser, BPF_LD | BPF_IMM, 0, 0, $3); }
 	| OP_LD K_PKT_LEN {
-		bpf_set_curr_instr(BPF_LD | BPF_W | BPF_LEN, 0, 0, 0); }
+		bpf_set_curr_instr(parser, BPF_LD | BPF_W | BPF_LEN, 0, 0, 0); }
 	| OP_LD extension {
-		bpf_set_curr_instr(BPF_LD | BPF_W | BPF_ABS, 0, 0,
+		bpf_set_curr_instr(parser, BPF_LD | BPF_W | BPF_ABS, 0, 0,
 				   SKF_AD_OFF + $2); }
 	| OP_LD 'M' '[' number ']' {
-		bpf_set_curr_instr(BPF_LD | BPF_MEM, 0, 0, $4); }
+		bpf_set_curr_instr(parser, BPF_LD | BPF_MEM, 0, 0, $4); }
 	| OP_LD '[' 'x' '+' number ']' {
-		bpf_set_curr_instr(BPF_LD | BPF_W | BPF_IND, 0, 0, $5); }
+		bpf_set_curr_instr(parser, BPF_LD | BPF_W | BPF_IND, 0, 0, $5); }
 	| OP_LD '[' '%' 'x' '+' number ']' {
-		bpf_set_curr_instr(BPF_LD | BPF_W | BPF_IND, 0, 0, $6); }
+		bpf_set_curr_instr(parser, BPF_LD | BPF_W | BPF_IND, 0, 0, $6); }
 	| OP_LD '[' number ']' {
-		bpf_set_curr_instr(BPF_LD | BPF_W | BPF_ABS, 0, 0, $3); }
+		bpf_set_curr_instr(parser, BPF_LD | BPF_W | BPF_ABS, 0, 0, $3); }
 	;
 
 ldxi
 	: OP_LDXI '#' number {
-		bpf_set_curr_instr(BPF_LDX | BPF_IMM, 0, 0, $3); }
+		bpf_set_curr_instr(parser, BPF_LDX | BPF_IMM, 0, 0, $3); }
 	| OP_LDXI number {
-		bpf_set_curr_instr(BPF_LDX | BPF_IMM, 0, 0, $2); }
+		bpf_set_curr_instr(parser, BPF_LDX | BPF_IMM, 0, 0, $2); }
 	;
 
 ldx
 	: OP_LDX '#' number {
-		bpf_set_curr_instr(BPF_LDX | BPF_IMM, 0, 0, $3); }
+		bpf_set_curr_instr(parser, BPF_LDX | BPF_IMM, 0, 0, $3); }
 	| OP_LDX K_PKT_LEN {
-		bpf_set_curr_instr(BPF_LDX | BPF_W | BPF_LEN, 0, 0, 0); }
+		bpf_set_curr_instr(parser, BPF_LDX | BPF_W | BPF_LEN, 0, 0, 0); }
 	| OP_LDX 'M' '[' number ']' {
-		bpf_set_curr_instr(BPF_LDX | BPF_MEM, 0, 0, $4); }
+		bpf_set_curr_instr(parser, BPF_LDX | BPF_MEM, 0, 0, $4); }
 	| OP_LDXB number '*' '(' '[' number ']' '&' number ')' {
 		if ($2 != 4 || $9 != 0xf) {
 			fprintf(stderr, "ldxb offset not supported!\n");
 			exit(1);
 		} else {
-			bpf_set_curr_instr(BPF_LDX | BPF_MSH | BPF_B, 0, 0, $6); } }
+			bpf_set_curr_instr(parser, BPF_LDX | BPF_MSH | BPF_B, 0, 0, $6); } }
 	| OP_LDX number '*' '(' '[' number ']' '&' number ')' {
 		if ($2 != 4 || $9 != 0xf) {
 			fprintf(stderr, "ldxb offset not supported!\n");
 			exit(1);
 		} else {
-			bpf_set_curr_instr(BPF_LDX | BPF_MSH | BPF_B, 0, 0, $6); } }
+			bpf_set_curr_instr(parser, BPF_LDX | BPF_MSH | BPF_B, 0, 0, $6); } }
 	;
 
 st
 	: OP_ST 'M' '[' number ']' {
-		bpf_set_curr_instr(BPF_ST, 0, 0, $4); }
+		bpf_set_curr_instr(parser, BPF_ST, 0, 0, $4); }
 	;
 
 stx
 	: OP_STX 'M' '[' number ']' {
-		bpf_set_curr_instr(BPF_STX, 0, 0, $4); }
+		bpf_set_curr_instr(parser, BPF_STX, 0, 0, $4); }
 	;
 
 jmp
 	: OP_JMP label {
-		bpf_set_jmp_label($2, JKL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JA, 0, 0, 0); }
+		bpf_set_jmp_label(parser, $2, JKL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JA, 0, 0, 0); }
 	;
 
 jeq
 	: OP_JEQ '#' number ',' label ',' label {
-		bpf_set_jmp_label($5, JTL);
-		bpf_set_jmp_label($7, JFL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JEQ | BPF_K, 0, 0, $3); }
+		bpf_set_jmp_label(parser, $5, JTL);
+		bpf_set_jmp_label(parser, $7, JFL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JEQ | BPF_K, 0, 0, $3); }
 	| OP_JEQ 'x' ',' label ',' label {
-		bpf_set_jmp_label($4, JTL);
-		bpf_set_jmp_label($6, JFL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JEQ | BPF_X, 0, 0, 0); }
+		bpf_set_jmp_label(parser, $4, JTL);
+		bpf_set_jmp_label(parser, $6, JFL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JEQ | BPF_X, 0, 0, 0); }
 	| OP_JEQ '%' 'x' ',' label ',' label {
-		bpf_set_jmp_label($5, JTL);
-		bpf_set_jmp_label($7, JFL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JEQ | BPF_X, 0, 0, 0); }
+		bpf_set_jmp_label(parser, $5, JTL);
+		bpf_set_jmp_label(parser, $7, JFL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JEQ | BPF_X, 0, 0, 0); }
 	| OP_JEQ '#' number ',' label {
-		bpf_set_jmp_label($5, JTL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JEQ | BPF_K, 0, 0, $3); }
+		bpf_set_jmp_label(parser, $5, JTL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JEQ | BPF_K, 0, 0, $3); }
 	| OP_JEQ 'x' ',' label {
-		bpf_set_jmp_label($4, JTL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JEQ | BPF_X, 0, 0, 0); }
+		bpf_set_jmp_label(parser, $4, JTL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JEQ | BPF_X, 0, 0, 0); }
 	| OP_JEQ '%' 'x' ',' label {
-		bpf_set_jmp_label($5, JTL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JEQ | BPF_X, 0, 0, 0); }
+		bpf_set_jmp_label(parser, $5, JTL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JEQ | BPF_X, 0, 0, 0); }
 	;
 
 jneq
 	: OP_JNEQ '#' number ',' label {
-		bpf_set_jmp_label($5, JFL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JEQ | BPF_K, 0, 0, $3); }
+		bpf_set_jmp_label(parser, $5, JFL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JEQ | BPF_K, 0, 0, $3); }
 	| OP_JNEQ 'x' ',' label {
-		bpf_set_jmp_label($4, JFL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JEQ | BPF_X, 0, 0, 0); }
+		bpf_set_jmp_label(parser, $4, JFL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JEQ | BPF_X, 0, 0, 0); }
 	| OP_JNEQ '%' 'x' ',' label {
-		bpf_set_jmp_label($5, JFL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JEQ | BPF_X, 0, 0, 0); }
+		bpf_set_jmp_label(parser, $5, JFL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JEQ | BPF_X, 0, 0, 0); }
 	;
 
 jlt
 	: OP_JLT '#' number ',' label {
-		bpf_set_jmp_label($5, JFL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JGE | BPF_K, 0, 0, $3); }
+		bpf_set_jmp_label(parser, $5, JFL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGE | BPF_K, 0, 0, $3); }
 	| OP_JLT 'x' ',' label {
-		bpf_set_jmp_label($4, JFL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JGE | BPF_X, 0, 0, 0); }
+		bpf_set_jmp_label(parser, $4, JFL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGE | BPF_X, 0, 0, 0); }
 	| OP_JLT '%' 'x' ',' label {
-		bpf_set_jmp_label($5, JFL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JGE | BPF_X, 0, 0, 0); }
+		bpf_set_jmp_label(parser, $5, JFL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGE | BPF_X, 0, 0, 0); }
 	;
 
 jle
 	: OP_JLE '#' number ',' label {
-		bpf_set_jmp_label($5, JFL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JGT | BPF_K, 0, 0, $3); }
+		bpf_set_jmp_label(parser, $5, JFL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGT | BPF_K, 0, 0, $3); }
 	| OP_JLE 'x' ',' label {
-		bpf_set_jmp_label($4, JFL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JGT | BPF_X, 0, 0, 0); }
+		bpf_set_jmp_label(parser, $4, JFL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGT | BPF_X, 0, 0, 0); }
 	| OP_JLE '%' 'x' ',' label {
-		bpf_set_jmp_label($5, JFL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JGT | BPF_X, 0, 0, 0); }
+		bpf_set_jmp_label(parser, $5, JFL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGT | BPF_X, 0, 0, 0); }
 	;
 
 jgt
 	: OP_JGT '#' number ',' label ',' label {
-		bpf_set_jmp_label($5, JTL);
-		bpf_set_jmp_label($7, JFL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JGT | BPF_K, 0, 0, $3); }
+		bpf_set_jmp_label(parser, $5, JTL);
+		bpf_set_jmp_label(parser, $7, JFL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGT | BPF_K, 0, 0, $3); }
 	| OP_JGT 'x' ',' label ',' label {
-		bpf_set_jmp_label($4, JTL);
-		bpf_set_jmp_label($6, JFL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JGT | BPF_X, 0, 0, 0); }
+		bpf_set_jmp_label(parser, $4, JTL);
+		bpf_set_jmp_label(parser, $6, JFL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGT | BPF_X, 0, 0, 0); }
 	| OP_JGT '%' 'x' ',' label ',' label {
-		bpf_set_jmp_label($5, JTL);
-		bpf_set_jmp_label($7, JFL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JGT | BPF_X, 0, 0, 0); }
+		bpf_set_jmp_label(parser, $5, JTL);
+		bpf_set_jmp_label(parser, $7, JFL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGT | BPF_X, 0, 0, 0); }
 	| OP_JGT '#' number ',' label {
-		bpf_set_jmp_label($5, JTL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JGT | BPF_K, 0, 0, $3); }
+		bpf_set_jmp_label(parser, $5, JTL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGT | BPF_K, 0, 0, $3); }
 	| OP_JGT 'x' ',' label {
-		bpf_set_jmp_label($4, JTL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JGT | BPF_X, 0, 0, 0); }
+		bpf_set_jmp_label(parser, $4, JTL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGT | BPF_X, 0, 0, 0); }
 	| OP_JGT '%' 'x' ',' label {
-		bpf_set_jmp_label($5, JTL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JGT | BPF_X, 0, 0, 0); }
+		bpf_set_jmp_label(parser, $5, JTL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGT | BPF_X, 0, 0, 0); }
 	;
 
 jge
 	: OP_JGE '#' number ',' label ',' label {
-		bpf_set_jmp_label($5, JTL);
-		bpf_set_jmp_label($7, JFL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JGE | BPF_K, 0, 0, $3); }
+		bpf_set_jmp_label(parser, $5, JTL);
+		bpf_set_jmp_label(parser, $7, JFL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGE | BPF_K, 0, 0, $3); }
 	| OP_JGE 'x' ',' label ',' label {
-		bpf_set_jmp_label($4, JTL);
-		bpf_set_jmp_label($6, JFL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JGE | BPF_X, 0, 0, 0); }
+		bpf_set_jmp_label(parser, $4, JTL);
+		bpf_set_jmp_label(parser, $6, JFL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGE | BPF_X, 0, 0, 0); }
 	| OP_JGE '%' 'x' ',' label ',' label {
-		bpf_set_jmp_label($5, JTL);
-		bpf_set_jmp_label($7, JFL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JGE | BPF_X, 0, 0, 0); }
+		bpf_set_jmp_label(parser, $5, JTL);
+		bpf_set_jmp_label(parser, $7, JFL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGE | BPF_X, 0, 0, 0); }
 	| OP_JGE '#' number ',' label {
-		bpf_set_jmp_label($5, JTL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JGE | BPF_K, 0, 0, $3); }
+		bpf_set_jmp_label(parser, $5, JTL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGE | BPF_K, 0, 0, $3); }
 	| OP_JGE 'x' ',' label {
-		bpf_set_jmp_label($4, JTL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JGE | BPF_X, 0, 0, 0); }
+		bpf_set_jmp_label(parser, $4, JTL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGE | BPF_X, 0, 0, 0); }
 	| OP_JGE '%' 'x' ',' label {
-		bpf_set_jmp_label($5, JTL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JGE | BPF_X, 0, 0, 0); }
+		bpf_set_jmp_label(parser, $5, JTL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGE | BPF_X, 0, 0, 0); }
 	;
 
 jset
 	: OP_JSET '#' number ',' label ',' label {
-		bpf_set_jmp_label($5, JTL);
-		bpf_set_jmp_label($7, JFL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JSET | BPF_K, 0, 0, $3); }
+		bpf_set_jmp_label(parser, $5, JTL);
+		bpf_set_jmp_label(parser, $7, JFL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JSET | BPF_K, 0, 0, $3); }
 	| OP_JSET 'x' ',' label ',' label {
-		bpf_set_jmp_label($4, JTL);
-		bpf_set_jmp_label($6, JFL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JSET | BPF_X, 0, 0, 0); }
+		bpf_set_jmp_label(parser, $4, JTL);
+		bpf_set_jmp_label(parser, $6, JFL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JSET | BPF_X, 0, 0, 0); }
 	| OP_JSET '%' 'x' ',' label ',' label {
-		bpf_set_jmp_label($5, JTL);
-		bpf_set_jmp_label($7, JFL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JSET | BPF_X, 0, 0, 0); }
+		bpf_set_jmp_label(parser, $5, JTL);
+		bpf_set_jmp_label(parser, $7, JFL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JSET | BPF_X, 0, 0, 0); }
 	| OP_JSET '#' number ',' label {
-		bpf_set_jmp_label($5, JTL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JSET | BPF_K, 0, 0, $3); }
+		bpf_set_jmp_label(parser, $5, JTL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JSET | BPF_K, 0, 0, $3); }
 	| OP_JSET 'x' ',' label {
-		bpf_set_jmp_label($4, JTL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JSET | BPF_X, 0, 0, 0); }
+		bpf_set_jmp_label(parser, $4, JTL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JSET | BPF_X, 0, 0, 0); }
 	| OP_JSET '%' 'x' ',' label {
-		bpf_set_jmp_label($5, JTL);
-		bpf_set_curr_instr(BPF_JMP | BPF_JSET | BPF_X, 0, 0, 0); }
+		bpf_set_jmp_label(parser, $5, JTL);
+		bpf_set_curr_instr(parser, BPF_JMP | BPF_JSET | BPF_X, 0, 0, 0); }
 	;
 
 add
 	: OP_ADD '#' number {
-		bpf_set_curr_instr(BPF_ALU | BPF_ADD | BPF_K, 0, 0, $3); }
+		bpf_set_curr_instr(parser, BPF_ALU | BPF_ADD | BPF_K, 0, 0, $3); }
 	| OP_ADD 'x' {
-		bpf_set_curr_instr(BPF_ALU | BPF_ADD | BPF_X, 0, 0, 0); }
+		bpf_set_curr_instr(parser, BPF_ALU | BPF_ADD | BPF_X, 0, 0, 0); }
 	| OP_ADD '%' 'x' {
-		bpf_set_curr_instr(BPF_ALU | BPF_ADD | BPF_X, 0, 0, 0); }
+		bpf_set_curr_instr(parser, BPF_ALU | BPF_ADD | BPF_X, 0, 0, 0); }
 	;
 
 sub
 	: OP_SUB '#' number {
-		bpf_set_curr_instr(BPF_ALU | BPF_SUB | BPF_K, 0, 0, $3); }
+		bpf_set_curr_instr(parser, BPF_ALU | BPF_SUB | BPF_K, 0, 0, $3); }
 	| OP_SUB 'x' {
-		bpf_set_curr_instr(BPF_ALU | BPF_SUB | BPF_X, 0, 0, 0); }
+		bpf_set_curr_instr(parser, BPF_ALU | BPF_SUB | BPF_X, 0, 0, 0); }
 	| OP_SUB '%' 'x' {
-		bpf_set_curr_instr(BPF_ALU | BPF_SUB | BPF_X, 0, 0, 0); }
+		bpf_set_curr_instr(parser, BPF_ALU | BPF_SUB | BPF_X, 0, 0, 0); }
 	;
 
 mul
 	: OP_MUL '#' number {
-		bpf_set_curr_instr(BPF_ALU | BPF_MUL | BPF_K, 0, 0, $3); }
+		bpf_set_curr_instr(parser, BPF_ALU | BPF_MUL | BPF_K, 0, 0, $3); }
 	| OP_MUL 'x' {
-		bpf_set_curr_instr(BPF_ALU | BPF_MUL | BPF_X, 0, 0, 0); }
+		bpf_set_curr_instr(parser, BPF_ALU | BPF_MUL | BPF_X, 0, 0, 0); }
 	| OP_MUL '%' 'x' {
-		bpf_set_curr_instr(BPF_ALU | BPF_MUL | BPF_X, 0, 0, 0); }
+		bpf_set_curr_instr(parser, BPF_ALU | BPF_MUL | BPF_X, 0, 0, 0); }
 	;
 
 div
 	: OP_DIV '#' number {
-		bpf_set_curr_instr(BPF_ALU | BPF_DIV | BPF_K, 0, 0, $3); }
+		bpf_set_curr_instr(parser, BPF_ALU | BPF_DIV | BPF_K, 0, 0, $3); }
 	| OP_DIV 'x' {
-		bpf_set_curr_instr(BPF_ALU | BPF_DIV | BPF_X, 0, 0, 0); }
+		bpf_set_curr_instr(parser, BPF_ALU | BPF_DIV | BPF_X, 0, 0, 0); }
 	| OP_DIV '%' 'x' {
-		bpf_set_curr_instr(BPF_ALU | BPF_DIV | BPF_X, 0, 0, 0); }
+		bpf_set_curr_instr(parser, BPF_ALU | BPF_DIV | BPF_X, 0, 0, 0); }
 	;
 
 mod
 	: OP_MOD '#' number {
-		bpf_set_curr_instr(BPF_ALU | BPF_MOD | BPF_K, 0, 0, $3); }
+		bpf_set_curr_instr(parser, BPF_ALU | BPF_MOD | BPF_K, 0, 0, $3); }
 	| OP_MOD 'x' {
-		bpf_set_curr_instr(BPF_ALU | BPF_MOD | BPF_X, 0, 0, 0); }
+		bpf_set_curr_instr(parser, BPF_ALU | BPF_MOD | BPF_X, 0, 0, 0); }
 	| OP_MOD '%' 'x' {
-		bpf_set_curr_instr(BPF_ALU | BPF_MOD | BPF_X, 0, 0, 0); }
+		bpf_set_curr_instr(parser, BPF_ALU | BPF_MOD | BPF_X, 0, 0, 0); }
 	;
 
 neg
 	: OP_NEG {
-		bpf_set_curr_instr(BPF_ALU | BPF_NEG, 0, 0, 0); }
+		bpf_set_curr_instr(parser, BPF_ALU | BPF_NEG, 0, 0, 0); }
 	;
 
 and
 	: OP_AND '#' number {
-		bpf_set_curr_instr(BPF_ALU | BPF_AND | BPF_K, 0, 0, $3); }
+		bpf_set_curr_instr(parser, BPF_ALU | BPF_AND | BPF_K, 0, 0, $3); }
 	| OP_AND 'x' {
-		bpf_set_curr_instr(BPF_ALU | BPF_AND | BPF_X, 0, 0, 0); }
+		bpf_set_curr_instr(parser, BPF_ALU | BPF_AND | BPF_X, 0, 0, 0); }
 	| OP_AND '%' 'x' {
-		bpf_set_curr_instr(BPF_ALU | BPF_AND | BPF_X, 0, 0, 0); }
+		bpf_set_curr_instr(parser, BPF_ALU | BPF_AND | BPF_X, 0, 0, 0); }
 	;
 
 or
 	: OP_OR '#' number {
-		bpf_set_curr_instr(BPF_ALU | BPF_OR | BPF_K, 0, 0, $3); }
+		bpf_set_curr_instr(parser, BPF_ALU | BPF_OR | BPF_K, 0, 0, $3); }
 	| OP_OR 'x' {
-		bpf_set_curr_instr(BPF_ALU | BPF_OR | BPF_X, 0, 0, 0); }
+		bpf_set_curr_instr(parser, BPF_ALU | BPF_OR | BPF_X, 0, 0, 0); }
 	| OP_OR '%' 'x' {
-		bpf_set_curr_instr(BPF_ALU | BPF_OR | BPF_X, 0, 0, 0); }
+		bpf_set_curr_instr(parser, BPF_ALU | BPF_OR | BPF_X, 0, 0, 0); }
 	;
 
 xor
 	: OP_XOR '#' number {
-		bpf_set_curr_instr(BPF_ALU | BPF_XOR | BPF_K, 0, 0, $3); }
+		bpf_set_curr_instr(parser, BPF_ALU | BPF_XOR | BPF_K, 0, 0, $3); }
 	| OP_XOR 'x' {
-		bpf_set_curr_instr(BPF_ALU | BPF_XOR | BPF_X, 0, 0, 0); }
+		bpf_set_curr_instr(parser, BPF_ALU | BPF_XOR | BPF_X, 0, 0, 0); }
 	| OP_XOR '%' 'x' {
-		bpf_set_curr_instr(BPF_ALU | BPF_XOR | BPF_X, 0, 0, 0); }
+		bpf_set_curr_instr(parser, BPF_ALU | BPF_XOR | BPF_X, 0, 0, 0); }
 	;
 
 lsh
 	: OP_LSH '#' number {
-		bpf_set_curr_instr(BPF_ALU | BPF_LSH | BPF_K, 0, 0, $3); }
+		bpf_set_curr_instr(parser, BPF_ALU | BPF_LSH | BPF_K, 0, 0, $3); }
 	| OP_LSH 'x' {
-		bpf_set_curr_instr(BPF_ALU | BPF_LSH | BPF_X, 0, 0, 0); }
+		bpf_set_curr_instr(parser, BPF_ALU | BPF_LSH | BPF_X, 0, 0, 0); }
 	| OP_LSH '%' 'x' {
-		bpf_set_curr_instr(BPF_ALU | BPF_LSH | BPF_X, 0, 0, 0); }
+		bpf_set_curr_instr(parser, BPF_ALU | BPF_LSH | BPF_X, 0, 0, 0); }
 	;
 
 rsh
 	: OP_RSH '#' number {
-		bpf_set_curr_instr(BPF_ALU | BPF_RSH | BPF_K, 0, 0, $3); }
+		bpf_set_curr_instr(parser, BPF_ALU | BPF_RSH | BPF_K, 0, 0, $3); }
 	| OP_RSH 'x' {
-		bpf_set_curr_instr(BPF_ALU | BPF_RSH | BPF_X, 0, 0, 0); }
+		bpf_set_curr_instr(parser, BPF_ALU | BPF_RSH | BPF_X, 0, 0, 0); }
 	| OP_RSH '%' 'x' {
-		bpf_set_curr_instr(BPF_ALU | BPF_RSH | BPF_X, 0, 0, 0); }
+		bpf_set_curr_instr(parser, BPF_ALU | BPF_RSH | BPF_X, 0, 0, 0); }
 	;
 
 ret
 	: OP_RET 'a' {
-		bpf_set_curr_instr(BPF_RET | BPF_A, 0, 0, 0); }
+		bpf_set_curr_instr(parser, BPF_RET | BPF_A, 0, 0, 0); }
 	| OP_RET '%' 'a' {
-		bpf_set_curr_instr(BPF_RET | BPF_A, 0, 0, 0); }
+		bpf_set_curr_instr(parser, BPF_RET | BPF_A, 0, 0, 0); }
 	| OP_RET 'x' {
-		bpf_set_curr_instr(BPF_RET | BPF_X, 0, 0, 0); }
+		bpf_set_curr_instr(parser, BPF_RET | BPF_X, 0, 0, 0); }
 	| OP_RET '%' 'x' {
-		bpf_set_curr_instr(BPF_RET | BPF_X, 0, 0, 0); }
+		bpf_set_curr_instr(parser, BPF_RET | BPF_X, 0, 0, 0); }
 	| OP_RET '#' number {
-		bpf_set_curr_instr(BPF_RET | BPF_K, 0, 0, $3); }
+		bpf_set_curr_instr(parser, BPF_RET | BPF_K, 0, 0, $3); }
 	;
 
 tax
 	: OP_TAX {
-		bpf_set_curr_instr(BPF_MISC | BPF_TAX, 0, 0, 0); }
+		bpf_set_curr_instr(parser, BPF_MISC | BPF_TAX, 0, 0, 0); }
 	;
 
 txa
 	: OP_TXA {
-		bpf_set_curr_instr(BPF_MISC | BPF_TXA, 0, 0, 0); }
+		bpf_set_curr_instr(parser, BPF_MISC | BPF_TXA, 0, 0, 0); }
 	;
 
 %%
 
-static int curr_instr = 0;
-static struct sock_filter out[BPF_MAXINSNS];
-static char **labels, **labels_jt, **labels_jf, **labels_k;
-
-static void bpf_assert_max(void)
+static void bpf_assert_max(yyparse_t parser)
 {
-	if (curr_instr >= BPF_MAXINSNS) {
+	if (parser->curr_instr >= BPF_MAXINSNS) {
 		fprintf(stderr, "only max %u insns allowed!\n", BPF_MAXINSNS);
 		exit(1);
 	}
 }
 
-static void bpf_set_curr_instr(uint16_t code, uint8_t jt, uint8_t jf,
+static void bpf_set_curr_instr(yyparse_t parser, uint16_t code, uint8_t jt, uint8_t jf,
 			       uint32_t k)
 {
-	bpf_assert_max();
-	out[curr_instr].code = code;
-	out[curr_instr].jt = jt;
-	out[curr_instr].jf = jf;
-	out[curr_instr].k = k;
-	curr_instr++;
+	bpf_assert_max(parser);
+	parser->out[parser->curr_instr].code = code;
+	parser->out[parser->curr_instr].jt = jt;
+	parser->out[parser->curr_instr].jf = jf;
+	parser->out[parser->curr_instr].k = k;
+	parser->curr_instr++;
 }
 
-static void bpf_set_curr_label(char *label)
+static void bpf_set_curr_label(yyparse_t parser, char *label)
 {
-	bpf_assert_max();
-	labels[curr_instr] = label;
+	bpf_assert_max(parser);
+	parser->labels[parser->curr_instr] = label;
 }
 
-static void bpf_set_jmp_label(char *label, enum jmp_type type)
+static void bpf_set_jmp_label(yyparse_t parser, char *label, enum jmp_type type)
 {
-	bpf_assert_max();
+	bpf_assert_max(parser);
 	switch (type) {
 	case JTL:
-		labels_jt[curr_instr] = label;
+		parser->labels_jt[parser->curr_instr] = label;
 		break;
 	case JFL:
-		labels_jf[curr_instr] = label;
+		parser->labels_jf[parser->curr_instr] = label;
 		break;
 	case JKL:
-		labels_k[curr_instr] = label;
+		parser->labels_k[parser->curr_instr] = label;
 		break;
 	}
 }
 
-static int bpf_find_insns_offset(const char *label)
+static int bpf_find_insns_offset(yyparse_t parser, const char *label)
 {
-	int i, max = curr_instr, ret = -ENOENT;
+	int i, max = parser->curr_instr, ret = -ENOENT;
 
 	for (i = 0; i < max; i++) {
-		if (labels[i] && !strcmp(label, labels[i])) {
+		if (parser->labels[i] && !strcmp(label, parser->labels[i])) {
 			ret = i;
 			break;
 		}
@@ -536,19 +541,19 @@ static int bpf_find_insns_offset(const char *label)
 	return ret;
 }
 
-static void bpf_stage_1_insert_insns(yyscan_t scanner)
+static void bpf_stage_1_insert_insns(yyscan_t scanner, yyparse_t parser)
 {
-	yyparse(scanner);
+	yyparse(scanner, parser);
 }
 
-static void bpf_reduce_k_jumps(void)
+static void bpf_reduce_k_jumps(yyparse_t parser)
 {
 	int i;
 
-	for (i = 0; i < curr_instr; i++) {
-		if (labels_k[i]) {
-			int off = bpf_find_insns_offset(labels_k[i]);
-			out[i].k = (uint32_t) (off - i - 1);
+	for (i = 0; i < parser->curr_instr; i++) {
+		if (parser->labels_k[i]) {
+			int off = bpf_find_insns_offset(parser, parser->labels_k[i]);
+			parser->out[i].k = (uint32_t) (off - i - 1);
 		}
 	}
 }
@@ -565,115 +570,117 @@ static uint8_t bpf_encode_jt_jf_offset(int off, int i)
 	return (uint8_t) delta;
 }
 
-static void bpf_reduce_jt_jumps(void)
+static void bpf_reduce_jt_jumps(yyparse_t parser)
 {
 	int i;
 
-	for (i = 0; i < curr_instr; i++) {
-		if (labels_jt[i]) {
-			int off = bpf_find_insns_offset(labels_jt[i]);
-			out[i].jt = bpf_encode_jt_jf_offset(off, i);
+	for (i = 0; i < parser->curr_instr; i++) {
+		if (parser->labels_jt[i]) {
+			int off = bpf_find_insns_offset(parser, parser->labels_jt[i]);
+			parser->out[i].jt = bpf_encode_jt_jf_offset(off, i);
 		}
 	}
 }
 
-static void bpf_reduce_jf_jumps(void)
+static void bpf_reduce_jf_jumps(yyparse_t parser)
 {
 	int i;
 
-	for (i = 0; i < curr_instr; i++) {
-		if (labels_jf[i]) {
-			int off = bpf_find_insns_offset(labels_jf[i]);
-			out[i].jf = bpf_encode_jt_jf_offset(off, i);
+	for (i = 0; i < parser->curr_instr; i++) {
+		if (parser->labels_jf[i]) {
+			int off = bpf_find_insns_offset(parser, parser->labels_jf[i]);
+			parser->out[i].jf = bpf_encode_jt_jf_offset(off, i);
 		}
 	}
 }
 
-static void bpf_stage_2_reduce_labels(void)
+static void bpf_stage_2_reduce_labels(yyparse_t parser)
 {
-	bpf_reduce_k_jumps();
-	bpf_reduce_jt_jumps();
-	bpf_reduce_jf_jumps();
+	bpf_reduce_k_jumps(parser);
+	bpf_reduce_jt_jumps(parser);
+	bpf_reduce_jf_jumps(parser);
 }
 
-static void bpf_pretty_print_c(void)
+static void bpf_pretty_print_c(yyparse_t parser)
 {
 	int i;
 
-	for (i = 0; i < curr_instr; i++)
-		printf("{ %#04x, %2u, %2u, %#010x },\n", out[i].code,
-		       out[i].jt, out[i].jf, out[i].k);
+	for (i = 0; i < parser->curr_instr; i++)
+		printf("{ %#04x, %2u, %2u, %#010x },\n", parser->out[i].code,
+		       parser->out[i].jt, parser->out[i].jf, parser->out[i].k);
 }
 
-static void bpf_pretty_print(void)
+static void bpf_pretty_print(yyparse_t parser)
 {
 	int i;
 
-	printf("%u,", curr_instr);
-	for (i = 0; i < curr_instr; i++)
-		printf("%u %u %u %u,", out[i].code,
-		       out[i].jt, out[i].jf, out[i].k);
+	printf("%u,", parser->curr_instr);
+	for (i = 0; i < parser->curr_instr; i++)
+		printf("%u %u %u %u,", parser->out[i].code,
+		       parser->out[i].jt, parser->out[i].jf, parser->out[i].k);
 	printf("\n");
 }
 
-static void bpf_init(void)
+static void bpf_init(yyparse_t parser)
 {
-	memset(out, 0, sizeof(out));
+	parser->curr_instr = 0;
+	memset(parser->out, 0, sizeof(parser->out));
 
-	labels = calloc(BPF_MAXINSNS, sizeof(*labels));
-	assert(labels);
-	labels_jt = calloc(BPF_MAXINSNS, sizeof(*labels_jt));
-	assert(labels_jt);
-	labels_jf = calloc(BPF_MAXINSNS, sizeof(*labels_jf));
-	assert(labels_jf);
-	labels_k = calloc(BPF_MAXINSNS, sizeof(*labels_k));
-	assert(labels_k);
+	parser->labels = calloc(BPF_MAXINSNS, sizeof(*parser->labels));
+	assert(parser->labels);
+	parser->labels_jt = calloc(BPF_MAXINSNS, sizeof(*parser->labels_jt));
+	assert(parser->labels_jt);
+	parser->labels_jf = calloc(BPF_MAXINSNS, sizeof(*parser->labels_jf));
+	assert(parser->labels_jf);
+	parser->labels_k = calloc(BPF_MAXINSNS, sizeof(*parser->labels_k));
+	assert(parser->labels_k);
 }
 
-static void bpf_destroy_labels(void)
+static void bpf_destroy_labels(yyparse_t parser)
 {
 	int i;
 
-	for (i = 0; i < curr_instr; i++) {
-		free(labels_jf[i]);
-		free(labels_jt[i]);
-		free(labels_k[i]);
-		free(labels[i]);
+	for (i = 0; i < parser->curr_instr; i++) {
+		free(parser->labels_jf[i]);
+		free(parser->labels_jt[i]);
+		free(parser->labels_k[i]);
+		free(parser->labels[i]);
 	}
 }
 
-static void bpf_destroy(void)
+static void bpf_destroy(yyparse_t parser)
 {
-	bpf_destroy_labels();
-	free(labels_jt);
-	free(labels_jf);
-	free(labels_k);
-	free(labels);
+	bpf_destroy_labels(parser);
+	free(parser->labels_jt);
+	free(parser->labels_jf);
+	free(parser->labels_k);
+	free(parser->labels);
 }
 
 void bpf_asm_compile(FILE *fp, bool cstyle)
 {
 	yyscan_t scanner;
+	struct yyparse_s parser;
 
 	yylex_init(&scanner);
 
 	yyset_in(fp, scanner);
 
-	bpf_init();
-	bpf_stage_1_insert_insns(scanner);
-	bpf_stage_2_reduce_labels();
-	bpf_destroy();
+	bpf_init(&parser);
+	bpf_stage_1_insert_insns(&parser, scanner);
+	bpf_stage_2_reduce_labels(&parser);
+	bpf_destroy(&parser);
 
 	if (cstyle)
-		bpf_pretty_print_c();
+		bpf_pretty_print_c(&parser);
 	else
-		bpf_pretty_print();
+		bpf_pretty_print(&parser);
 
 	if (fp != stdin)
 		fclose(fp);
 }
 
-void yyerror(yyscan_t scanner, const char *str)
+void yyerror(yyscan_t scanner, yyparse_t parser, const char *str)
 {
 	fprintf(stderr, "error: %s at line %d\n", str, yyget_lineno(scanner));
 	exit(1);

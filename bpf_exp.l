@@ -29,7 +29,7 @@
 
 #include "bpf_exp.yacc.h"
 
-extern void yyerror(yyscan_t scanner, const char *str);
+extern void yyerror(yyscan_t scanner, yyparse_t parser, const char *str);
 
 %}
 
@@ -195,7 +195,7 @@ extern void yyerror(yyscan_t scanner, const char *str);
 
 .		{
 			printf("unknown character \'%s\'", yytext);
-			yyerror(yyscanner, "lex unknown character");
+			yyerror(yyscanner, NULL, "lex unknown character");
 		}
 
 %%
