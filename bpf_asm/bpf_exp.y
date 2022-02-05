@@ -56,7 +56,7 @@ typedef void* yyscan_t;
 struct yyparse_s;
 typedef struct yyparse_s *yyparse_t;
 
-void bpf_asm_compile(FILE *fp, bool cstyle);
+void bpf_asm_compile(const char *str, int len, void (*write)(const char *str), bool cstyle);
 }
 
 %define api.pure full
@@ -601,24 +601,29 @@ static void bpf_stage_2_reduce_labels(yyparse_t parser)
 	bpf_reduce_jf_jumps(parser);
 }
 
-static void bpf_pretty_print_c(yyparse_t parser)
+static void bpf_pretty_print_c(yyparse_t parser, void (*write)(const char *str))
 {
 	int i;
+	char buf[4096];
 
 	for (i = 0; i < parser->curr_instr; i++)
-		printf("{ %#04x, %2u, %2u, %#010x },\n", parser->out[i].code,
+		snprintf(buf, sizeof(buf), "{ %#04x, %2u, %2u, %#010x },\n", parser->out[i].code,
 		       parser->out[i].jt, parser->out[i].jf, parser->out[i].k);
+		write(buf);
 }
 
-static void bpf_pretty_print(yyparse_t parser)
+static void bpf_pretty_print(yyparse_t parser, void (*write)(const char *str))
 {
 	int i;
+	char buf[4096];
 
-	printf("%u,", parser->curr_instr);
+	snprintf(buf, sizeof(buf), "%u,", parser->curr_instr);
+	write(buf);
 	for (i = 0; i < parser->curr_instr; i++)
-		printf("%u %u %u %u,", parser->out[i].code,
+		snprintf(buf, sizeof(buf), "%u %u %u %u,", parser->out[i].code,
 		       parser->out[i].jt, parser->out[i].jf, parser->out[i].k);
-	printf("\n");
+		write(buf);
+	write("\n");
 }
 
 static void bpf_init(yyparse_t parser)
@@ -657,29 +662,27 @@ static void bpf_destroy(yyparse_t parser)
 	free(parser->labels);
 }
 
-void bpf_asm_compile(FILE *fp, bool cstyle)
+void bpf_asm_compile(const char *str, int len, void (*write)(const char *str), bool cstyle)
 {
 	yyscan_t scanner;
 	struct yyparse_s parser;
 
 	yylex_init(&scanner);
 
-	yyset_in(fp, scanner);
+	YY_BUFFER_STATE buf = yy_scan_bytes(str, len, scanner);
 
 	bpf_init(&parser);
 	bpf_stage_1_insert_insns(&parser, scanner);
 	bpf_stage_2_reduce_labels(&parser);
 	bpf_destroy(&parser);
 
+	yy_delete_buffer(buf, scanner);
 	yylex_destroy(scanner);
 
 	if (cstyle)
-		bpf_pretty_print_c(&parser);
+		bpf_pretty_print_c(&parser, write);
 	else
-		bpf_pretty_print(&parser);
-
-	if (fp != stdin)
-		fclose(fp);
+		bpf_pretty_print(&parser, write);
 }
 
 void yyerror(yyscan_t scanner, yyparse_t parser, const char *str)
