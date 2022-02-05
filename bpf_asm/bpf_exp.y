@@ -672,7 +672,7 @@ void bpf_asm_compile(const char *str, int len, void (*write)(const char *str), b
 	YY_BUFFER_STATE buf = yy_scan_bytes(str, len, scanner);
 
 	bpf_init(&parser);
-	bpf_stage_1_insert_insns(&parser, scanner);
+	bpf_stage_1_insert_insns(scanner, &parser);
 	bpf_stage_2_reduce_labels(&parser);
 	bpf_destroy(&parser);
 
