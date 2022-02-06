@@ -154,3 +154,5 @@ cython_debug/
 /_skbuild/
 /build*/
 /venv/
+bpf_asm/_bpf_asm.c
+bpf_asm/*.html

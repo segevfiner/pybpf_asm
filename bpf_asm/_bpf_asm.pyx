@@ -1,3 +1,5 @@
+# cython: language_level=3str
+
 from libc.stdlib cimport free
 from libc.stdint cimport uint8_t, uint16_t, uint32_t
 
