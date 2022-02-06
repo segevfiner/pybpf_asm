@@ -47,6 +47,7 @@ extern void yyerror(yyscan_t scanner, yyparse_t parser, const char *str);
 
 %option reentrant
 %option bison-bridge
+%option extra-type="yyparse_t"
 
 %%
 
@@ -194,8 +195,8 @@ extern void yyerror(yyscan_t scanner, yyparse_t parser, const char *str);
 [ \n]+				{ /* NOP */ }
 
 .		{
-			printf("unknown character \'%s\'", yytext);
-			yyerror(yyscanner, NULL, "lex unknown character");
+			yyerror(yyscanner, yyextra, "lex unknown character");
+			return YYerror;
 		}
 
 %%

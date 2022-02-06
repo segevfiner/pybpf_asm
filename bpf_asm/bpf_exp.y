@@ -36,8 +36,9 @@ enum jmp_type { JTL, JFL, JKL };
 
 typedef struct yyparse_s {
 	int curr_instr;
-	struct sock_filter out[BPF_MAXINSNS];
+	struct sock_filter *out;
 	char **labels, **labels_jt, **labels_jf, **labels_k;
+	char *error;
 } *yyparse_t;
 
 extern void yyerror(yyscan_t scanner, yyparse_t parser, const char *str);
@@ -51,12 +52,14 @@ static void bpf_set_jmp_label(yyparse_t parser, char *label, enum jmp_type type)
 %code requires {
 #include <stdio.h>
 #include <stdbool.h>
+#include <linux/filter.h>
 
 typedef void* yyscan_t;
 struct yyparse_s;
 typedef struct yyparse_s *yyparse_t;
 
-void bpf_asm_compile(const char *str, int len, void (*write)(const char *str), bool cstyle);
+int bpf_asm_compile(const char *str, int len, struct sock_filter **out, char **error);
+
 }
 
 %define api.pure full
@@ -541,9 +544,9 @@ static int bpf_find_insns_offset(yyparse_t parser, const char *label)
 	return ret;
 }
 
-static void bpf_stage_1_insert_insns(yyscan_t scanner, yyparse_t parser)
+static int bpf_stage_1_insert_insns(yyscan_t scanner, yyparse_t parser)
 {
-	yyparse(scanner, parser);
+	return yyparse(scanner, parser);
 }
 
 static void bpf_reduce_k_jumps(yyparse_t parser)
@@ -601,36 +604,13 @@ static void bpf_stage_2_reduce_labels(yyparse_t parser)
 	bpf_reduce_jf_jumps(parser);
 }
 
-static void bpf_pretty_print_c(yyparse_t parser, void (*write)(const char *str))
-{
-	int i;
-	char buf[4096];
-
-	for (i = 0; i < parser->curr_instr; i++)
-		snprintf(buf, sizeof(buf), "{ %#04x, %2u, %2u, %#010x },\n", parser->out[i].code,
-		       parser->out[i].jt, parser->out[i].jf, parser->out[i].k);
-		write(buf);
-}
-
-static void bpf_pretty_print(yyparse_t parser, void (*write)(const char *str))
-{
-	int i;
-	char buf[4096];
-
-	snprintf(buf, sizeof(buf), "%u,", parser->curr_instr);
-	write(buf);
-	for (i = 0; i < parser->curr_instr; i++)
-		snprintf(buf, sizeof(buf), "%u %u %u %u,", parser->out[i].code,
-		       parser->out[i].jt, parser->out[i].jf, parser->out[i].k);
-		write(buf);
-	write("\n");
-}
-
 static void bpf_init(yyparse_t parser)
 {
 	parser->curr_instr = 0;
-	memset(parser->out, 0, sizeof(parser->out));
+	parser->error = NULL;
 
+	parser->out = calloc(BPF_MAXINSNS, sizeof(*parser->out));
+	assert(parser->out);
 	parser->labels = calloc(BPF_MAXINSNS, sizeof(*parser->labels));
 	assert(parser->labels);
 	parser->labels_jt = calloc(BPF_MAXINSNS, sizeof(*parser->labels_jt));
@@ -656,37 +636,52 @@ static void bpf_destroy_labels(yyparse_t parser)
 static void bpf_destroy(yyparse_t parser)
 {
 	bpf_destroy_labels(parser);
+	free(parser->out);
 	free(parser->labels_jt);
 	free(parser->labels_jf);
 	free(parser->labels_k);
 	free(parser->labels);
+	free(parser->error);
 }
 
-void bpf_asm_compile(const char *str, int len, void (*write)(const char *str), bool cstyle)
+int bpf_asm_compile(const char *str, int len, struct sock_filter **out, char **error)
 {
+	int result;
+	int err;
 	yyscan_t scanner;
 	struct yyparse_s parser;
 
-	yylex_init(&scanner);
+	yylex_init_extra(&parser, &scanner);
 
 	YY_BUFFER_STATE buf = yy_scan_bytes(str, len, scanner);
+	yyset_lineno(1, scanner); /* Why doesn't flex initialize this... */
 
 	bpf_init(&parser);
-	bpf_stage_1_insert_insns(scanner, &parser);
+	err = bpf_stage_1_insert_insns(scanner, &parser);
+	if (err) {
+		*error = parser.error;
+		parser.error = NULL;
+		result = 0;
+		goto out;
+	}
 	bpf_stage_2_reduce_labels(&parser);
-	bpf_destroy(&parser);
 
+	*out = parser.out;
+	parser.out = NULL;
+	result = parser.curr_instr;
+
+out:
+	bpf_destroy(&parser);
 	yy_delete_buffer(buf, scanner);
 	yylex_destroy(scanner);
 
-	if (cstyle)
-		bpf_pretty_print_c(&parser, write);
-	else
-		bpf_pretty_print(&parser, write);
+	return result;
 }
 
 void yyerror(yyscan_t scanner, yyparse_t parser, const char *str)
 {
-	fprintf(stderr, "error: %s at line %d\n", str, yyget_lineno(scanner));
-	exit(1);
+	int size = snprintf(NULL, 0, "error: %s at line %d", str, yyget_lineno(scanner));
+	parser->error = malloc(size + 1);
+	assert(parser->error);
+	snprintf(parser->error, size + 1, "error: %s at line %d", str, yyget_lineno(scanner));
 }
