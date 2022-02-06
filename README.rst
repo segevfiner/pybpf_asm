@@ -24,6 +24,8 @@ drop:
 print(bpf_asm.assemble(ASM))
 ```
 
+Or use the ``pybpf_asm`` script. See ``pybpf_asm --help`` for usage.
+
 License
 -------
 GPL-2.0-only.
