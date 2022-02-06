@@ -20,7 +20,7 @@ from skbuild import setup
 
 
 with open("bpf_asm/__init__.py", "r", encoding="utf-8") as f:
-    version = re.search(r'(?m)^__version__ = u"([a-zA-Z0-9.-]+)"', f.read()).group(1)
+    version = re.search(r'(?m)^__version__ = "([a-zA-Z0-9.-]+)"', f.read()).group(1)
 
 with open("README.rst", "r", encoding="utf-8") as f:
     long_description = f.read()
@@ -57,4 +57,9 @@ setup(
     zip_safe=False,
     packages=find_packages(),
     python_requires='>=3.6',
+    extras_require={
+        "dev": [
+            "pytest"
+        ],
+    }
 )

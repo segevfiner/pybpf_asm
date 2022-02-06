@@ -73,7 +73,7 @@ def dumps(bpf: [(int, int, int, int)], format=BpfDumpType.DEFAULT) -> str:
     if format == BpfDumpType.DEFAULT:
         result.append(f"{len(bpf)},")
 
-        for insn in bpf[:-2]:
+        for insn in bpf[:-1]:
             result.append(f"{insn[0]} {insn[1]} {insn[2]} {insn[3]},")
 
         insn = bpf[-1]
@@ -89,5 +89,5 @@ def dumps(bpf: [(int, int, int, int)], format=BpfDumpType.DEFAULT) -> str:
 
     elif format == BpfDumpType.C_ARRAY:
         for insn in bpf:
-            result.append(f"{{ 0x{insn[0]:x} {insn[1]} {insn[2]} 0x{insn.k[3]:08x} }},")
+            result.append(f"{{ 0x{insn[0]:x}, {insn[1]}, {insn[2]}, 0x{insn[3]:08x} }},")
         return '\n'.join(result)
