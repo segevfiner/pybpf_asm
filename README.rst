@@ -8,7 +8,7 @@ pybpf_asm
    :target: https://github.com/segevfiner/pybpf_asm/actions/workflows/build-and-test.yml
    :alt: Build & Test
 
-.. .. image:: https://github.com/segevfiner/pybpf_asm/actions/workflows/docs.yml/badge.svg
+.. image:: https://github.com/segevfiner/pybpf_asm/actions/workflows/docs.yml/badge.svg
    :target: https://segevfiner.github.io/pybpf_asm/
    :alt: Docs
 
