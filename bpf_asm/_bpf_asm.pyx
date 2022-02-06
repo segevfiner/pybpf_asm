@@ -9,7 +9,6 @@ class Error(Exception):
     pass
 
 
-
 class BpfDumpType(enum.IntEnum):
     DEFAULT = 0
     MULTILINE = 1
