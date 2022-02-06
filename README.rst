@@ -4,4 +4,26 @@ pybpf_asm
 
 Python BPF Assembler.
 
-Based on BPF assembler in Linux sources.
+Based on the BPF assembler in Linux sources.
+
+Usage
+-----
+```python
+import bpf_asm
+
+
+ASM = """
+    ldh [12]
+    jeq #0x800, accept, drop
+accept:
+    ret #65536
+drop:
+    ret #0
+"""
+
+print(bpf_asm.assemble(ASM))
+```
+
+License
+-------
+GPL-2.0-only.

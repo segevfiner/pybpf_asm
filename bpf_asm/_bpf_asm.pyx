@@ -16,7 +16,7 @@
 """
 Python BPF Assembler.
 
-Based on BPF assembler in Linux sources.
+Based on the BPF assembler in Linux sources.
 """
 
 # cython: language_level=3str
