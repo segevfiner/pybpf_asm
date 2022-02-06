@@ -19,7 +19,7 @@ Based on the BPF assembler in Linux sources.
 Installations
 -------------
 Wheels are available. To build from source you need a relatively recent Flex & Bison. (On Windows
-you can use winflexbison, on macOS, and sometimes on Linux, you need to install them from homebrew).
+you can use winflexbison, on macOS, and sometimes on Linux, you can install them from homebrew).
 
 Usage
 -----
