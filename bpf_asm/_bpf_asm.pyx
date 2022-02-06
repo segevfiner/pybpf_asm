@@ -13,20 +13,21 @@
 # You should have received a copy of the GNU General Public License along
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+# cython: language_level=3str, binding=True
 """
 Python BPF Assembler.
 
 Based on the BPF assembler in Linux sources.
 """
 
-# cython: language_level=3str
-
 import enum
+from typing import List, Tuple
 from libc.stdlib cimport free
 from libc.stdint cimport uint8_t, uint16_t, uint32_t
 
 
 class Error(Exception):
+    """Raised when there is an error assembling BPF."""
     pass
 
 
@@ -46,7 +47,7 @@ cdef extern from "bpf_exp.yacc.h":
     int bpf_asm_compile(const char *str, int len, sock_filter (**out), const char **error)
 
 
-def assemble(str: str) -> [(int, int, int, int)]:
+def assemble(str: str) -> List[Tuple[int, int, int, int]]:
     """Assemble BPF *str*."""
     cdef sock_filter *out = NULL
     cdef char *error = NULL
@@ -66,7 +67,7 @@ def assemble(str: str) -> [(int, int, int, int)]:
         free(error)
 
 
-def dumps(bpf: [(int, int, int, int)], format=BpfDumpType.DEFAULT) -> str:
+def dumps(bpf: List[Tuple[int, int, int, int]], format=BpfDumpType.DEFAULT) -> str:
     """Dump *bpf* to a str in *format*."""
     result = []
 
