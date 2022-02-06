@@ -2,9 +2,8 @@
 # Copyright (C) 2022  Segev Finer
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
+# it under the terms of the GNU General Public License version 2 as
+# published by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -41,7 +40,19 @@ setup(
         "Issue Tracker": "https://github.com/segevfiner/pybpf_asm/issues",
     },
     license="GPL-2.0-only",
-    classifiers=[],  # TODO
+    classifiers=[
+        "Development Status :: 3 - Alpha",
+        "Intended Audience :: Developers",
+        "Topic :: System :: Networking :: Monitoring",
+        "License :: OSI Approved :: GNU General Public License v2 (GPLv2)",
+        "Programming Language :: Cython",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+    ],
     keywords="bpf",
     zip_safe=False,
     packages=find_packages(),
