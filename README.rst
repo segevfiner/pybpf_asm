@@ -1,6 +1,6 @@
 pybpf_asm
 =========
-:warning: WIP :warning:
+\:warning: WIP :warning:
 
 Python BPF Assembler.
 
