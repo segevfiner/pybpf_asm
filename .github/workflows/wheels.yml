@@ -1,0 +1,71 @@
+name: Build Wheels
+
+on:
+  push:
+    branches:
+    - master
+  release:
+    types:
+    - published
+
+jobs:
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-20.04, windows-2019, macOS-10.15]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      # Used to host cibuildwheel
+      - uses: actions/setup-python@v2
+
+      - name: Install cibuildwheel
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install cibuildwheel==2.3.1
+
+      - name: Build sdist
+        if: matrix.os == 'ubuntu-20.04'
+        run: |
+          pip install cython>=0.29.24
+          python setup.py sdist
+
+      - name: Build wheels
+        run: |
+          python -m cibuildwheel --output-dir dist
+        env:
+          CIBW_SKIP: 'pp* *-musllinux*'
+          CIBW_BEFORE_ALL_LINUX: >
+            brew install flex bison
+          CIBW_BEFORE_ALL_WINDOWS: >
+            Invoke-WebRequest https://github.com/lexxmark/winflexbison/releases/download/v2.5.25/win_flex_bison-2.5.25.zip -OutFile win_flex_bison-2.5.25.zip &&
+            Expand-Archive win_flex_bison-2.5.25.zip tools
+          CIBW_ENVIRONMENT_WINDOWS: PATH="$PWD\tools;$PATH"
+          CIBW_BEFORE_ALL_MACOS: >
+            brew install flex bison
+          CIBW_ENVIRONMENT_MACOS: PATH="/usr/local/opt/flex/bin:/usr/local/opt/bison/bin:$PATH"
+
+      - uses: actions/upload-artifact@v2
+        with:
+          path: dist/*
+
+  upload_release:
+    name: Upload release
+    needs: [build_wheels]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release' && github.event.action == 'published'
+
+    steps:
+    - uses: actions/download-artifact@v2
+      with:
+        name: artifact
+        path: dist
+
+    - name: Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: dist/*
