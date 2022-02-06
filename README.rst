@@ -1,7 +1,7 @@
 pybpf_asm
 =========
-.. image:: https://img.shields.io/pypi/v/pybpf_asm.svg
-   :target: https://pypi.org/project/pybpf_asm/
+.. image:: https://img.shields.io/pypi/v/bpf_asm.svg
+   :target: https://pypi.org/project/bpf_asm/
    :alt: PyPI
 
 .. image:: https://github.com/segevfiner/pybpf_asm/actions/workflows/build-and-test.yml/badge.svg
