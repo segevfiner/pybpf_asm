@@ -45,7 +45,7 @@ jobs:
           CIBW_BEFORE_ALL_WINDOWS: >
             pwsh -c "Invoke-WebRequest https://github.com/lexxmark/winflexbison/releases/download/v2.5.25/win_flex_bison-2.5.25.zip -OutFile win_flex_bison-2.5.25.zip &&
             Expand-Archive win_flex_bison-2.5.25.zip tools"
-          CIBW_ENVIRONMENT_WINDOWS: PATH="$PWD\tools;$PATH"
+          CIBW_ENVIRONMENT_WINDOWS: PATH="$(pwd)\tools;$PATH"
           CIBW_BEFORE_ALL_MACOS: >
             brew install flex bison
           CIBW_ENVIRONMENT_MACOS: PATH="/usr/local/opt/flex/bin:/usr/local/opt/bison/bin:$PATH"
