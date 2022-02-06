@@ -30,7 +30,7 @@ class Error(Exception):
     pass
 
 
-class BpfDumpType(enum.IntEnum):
+class BpfDumpType(enum.Enum):
     DEFAULT = 0
     MULTILINE = 1
     C_ARRAY = 2
@@ -91,3 +91,6 @@ def dumps(bpf: [(int, int, int, int)], format=BpfDumpType.DEFAULT) -> str:
         for insn in bpf:
             result.append(f"{{ 0x{insn[0]:x}, {insn[1]}, {insn[2]}, 0x{insn[3]:08x} }},")
         return '\n'.join(result)
+
+    else:
+        raise ValueError(f"unknown format: {format!r}")

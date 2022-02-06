@@ -56,6 +56,11 @@ setup(
     keywords="bpf",
     zip_safe=False,
     packages=find_packages(),
+    entry_points={
+        "console_scripts": [
+            "pybpf_asm = bpf_asm.__main__:main"
+        ],
+    },
     python_requires='>=3.6',
     extras_require={
         "dev": [
