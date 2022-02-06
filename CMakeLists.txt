@@ -16,6 +16,9 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 cmake_minimum_required(VERSION 3.22)
+
+list(PREPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
+
 project(pybpf_asm)
 
 find_package(FLEX REQUIRED)
