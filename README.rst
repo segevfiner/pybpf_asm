@@ -13,7 +13,7 @@ Usage
     import bpf_asm
 
 
-    ASM = """
+    ASM = """\
         ldh [12]
         jeq #0x800, accept, drop
     accept:
