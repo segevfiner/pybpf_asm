@@ -610,15 +610,15 @@ static void bpf_init(yyparse_t parser)
 	parser->error = NULL;
 
 	parser->out = calloc(BPF_MAXINSNS, sizeof(*parser->out));
-	assert(parser->out);
+	if (!parser->out) { abort(); }
 	parser->labels = calloc(BPF_MAXINSNS, sizeof(*parser->labels));
-	assert(parser->labels);
+	if (!parser->labels) { abort(); }
 	parser->labels_jt = calloc(BPF_MAXINSNS, sizeof(*parser->labels_jt));
-	assert(parser->labels_jt);
+	if (!parser->labels_jt) { abort(); }
 	parser->labels_jf = calloc(BPF_MAXINSNS, sizeof(*parser->labels_jf));
-	assert(parser->labels_jf);
+	if (!parser->labels_jf) { abort(); }
 	parser->labels_k = calloc(BPF_MAXINSNS, sizeof(*parser->labels_k));
-	assert(parser->labels_k);
+	if (!parser->labels_k) { abort(); }
 }
 
 static void bpf_destroy_labels(yyparse_t parser)
@@ -682,6 +682,6 @@ void yyerror(yyscan_t scanner, yyparse_t parser, const char *str)
 {
 	int size = snprintf(NULL, 0, "error: %s at line %d", str, yyget_lineno(scanner));
 	parser->error = malloc(size + 1);
-	assert(parser->error);
+	if (!parser->error) { abort(); };
 	snprintf(parser->error, size + 1, "error: %s at line %d", str, yyget_lineno(scanner));
 }
