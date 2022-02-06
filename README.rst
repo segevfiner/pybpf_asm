@@ -1,5 +1,17 @@
 pybpf_asm
 =========
+.. image:: https://img.shields.io/pypi/v/pybpf_asm.svg
+   :target: https://pypi.org/project/pybpf_asm/
+   :alt: PyPI
+
+.. image:: https://github.com/segevfiner/pybpf_asm/actions/workflows/build-and-test.yml/badge.svg
+   :target: https://github.com/segevfiner/pybpf_asm/actions/workflows/build-and-test.yml
+   :alt: Build & Test
+
+.. .. image:: https://github.com/segevfiner/pybpf_asm/actions/workflows/docs.yml/badge.svg
+   :target: https://segevfiner.github.io/pybpf_asm/
+   :alt: Docs
+
 \:warning: WIP :warning:
 
 Python BPF Assembler.
