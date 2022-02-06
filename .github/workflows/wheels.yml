@@ -40,6 +40,7 @@ jobs:
         env:
           CIBW_SKIP: 'pp* *-musllinux*'
           CIBW_BEFORE_ALL_LINUX: >
+            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" &&
             brew install flex bison
           CIBW_BEFORE_ALL_WINDOWS: >
             pwsh -c "Invoke-WebRequest https://github.com/lexxmark/winflexbison/releases/download/v2.5.25/win_flex_bison-2.5.25.zip -OutFile win_flex_bison-2.5.25.zip &&
