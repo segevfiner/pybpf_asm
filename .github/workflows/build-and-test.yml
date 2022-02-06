@@ -31,16 +31,22 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip setuptools wheel
+    - name: Install depdencecies (Linux)
+      if: ${{ runner.os == 'Linux' }}
+      run: |
+        brew install flex bison
     - name: Install depdencecies (Windows)
       if: ${{ runner.os == 'Windows' }}
       run: |
         Invoke-WebRequest https://github.com/lexxmark/winflexbison/releases/download/v2.5.25/win_flex_bison-2.5.25.zip -OutFile win_flex_bison-2.5.25.zip
         Expand-Archive win_flex_bison-2.5.25.zip tools
         echo "$PWD\tools" >> $GITHUB_PATH
-    - name: Install depdencecies (Linux & macOS)
-      if: ${{ runner.os != 'Windows' }}
+    - name: Install depdencecies (macOS)
+      if: ${{ runner.os == 'macOS' }}
       run: |
         brew install flex bison
+        echo "/usr/local/opt/flex/bin" >> $GITHUB_PATH
+        echo "/usr/local/opt/bison/bin" >> $GITHUB_PATH
     - name: Install
       run: |
         pip install -e .[dev]
