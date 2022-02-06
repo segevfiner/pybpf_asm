@@ -40,7 +40,7 @@ jobs:
       run: |
         Invoke-WebRequest https://github.com/lexxmark/winflexbison/releases/download/v2.5.25/win_flex_bison-2.5.25.zip -OutFile win_flex_bison-2.5.25.zip
         Expand-Archive win_flex_bison-2.5.25.zip tools
-        echo "$PWD\tools" >> $GITHUB_PATH
+        echo "$PWD\tools" >> $env:GITHUB_PATH
     - name: Install depdencecies (macOS)
       if: ${{ runner.os == 'macOS' }}
       run: |
