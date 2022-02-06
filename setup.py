@@ -64,7 +64,8 @@ setup(
     python_requires='>=3.6',
     extras_require={
         "dev": [
-            "pytest"
+            "pytest",
+            "flake8"
         ],
     }
 )
