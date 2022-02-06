@@ -15,6 +15,7 @@
  * CA, USA, 2-2.
  *
  * Copyright 2013 Daniel Borkmann <borkmann@redhat.com>
+ * Modified by Segev Finer for pybpf_asm
  * Licensed under the GNU General Public License, version 2.0 (GPLv2)
  */
 
