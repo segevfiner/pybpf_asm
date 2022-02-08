@@ -51,6 +51,7 @@ static void bpf_set_jmp_label(yyparse_t parser, char *label, enum jmp_type type)
 %}
 
 %code requires {
+
 #include <stdio.h>
 #include <stdbool.h>
 #include <linux/filter.h>
