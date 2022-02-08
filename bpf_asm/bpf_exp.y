@@ -149,8 +149,8 @@ ldb
 	| OP_LDB '[' number ']' {
 		if (bpf_set_curr_instr(scanner, parser, BPF_LD | BPF_B | BPF_ABS, 0, 0, $3)) { YYABORT; } }
 	| OP_LDB extension {
-		bpf_set_curr_instr(scanner, parser, BPF_LD | BPF_B | BPF_ABS, 0, 0,
-				   SKF_AD_OFF + $2); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_LD | BPF_B | BPF_ABS, 0, 0,
+				   SKF_AD_OFF + $2)) { YYABORT; } }
 	;
 
 ldh
@@ -161,8 +161,8 @@ ldh
 	| OP_LDH '[' number ']' {
 		if (bpf_set_curr_instr(scanner, parser, BPF_LD | BPF_H | BPF_ABS, 0, 0, $3)) { YYABORT; } }
 	| OP_LDH extension {
-		bpf_set_curr_instr(scanner, parser, BPF_LD | BPF_H | BPF_ABS, 0, 0,
-				   SKF_AD_OFF + $2); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_LD | BPF_H | BPF_ABS, 0, 0,
+				   SKF_AD_OFF + $2)) { YYABORT; } }
 	;
 
 ldi
@@ -178,8 +178,8 @@ ld
 	| OP_LD K_PKT_LEN {
 		if (bpf_set_curr_instr(scanner, parser, BPF_LD | BPF_W | BPF_LEN, 0, 0, 0)) { YYABORT; } }
 	| OP_LD extension {
-		bpf_set_curr_instr(scanner, parser, BPF_LD | BPF_W | BPF_ABS, 0, 0,
-				   SKF_AD_OFF + $2); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_LD | BPF_W | BPF_ABS, 0, 0,
+				   SKF_AD_OFF + $2)) { YYABORT; } }
 	| OP_LD 'M' '[' number ']' {
 		if (bpf_set_curr_instr(scanner, parser, BPF_LD | BPF_MEM, 0, 0, $4)) { YYABORT; } }
 	| OP_LD '[' 'x' '+' number ']' {
@@ -576,16 +576,18 @@ static int bpf_reduce_k_jumps(yyscan_t scanner, yyparse_t parser)
 	return 0;
 }
 
-static uint8_t bpf_encode_jt_jf_offset(int off, int i)
+static int bpf_encode_jt_jf_offset(yyscan_t scanner, yyparse_t parser, int off, int i)
 {
 	int delta = off - i - 1;
 
 	if (delta < 0 || delta > 255) {
-		fprintf(stderr, "error: insn #%d jumps to insn #%d, "
-				"which is out of range\n", i, off);
-		exit(1);
+		char errbuf[512];
+		snprintf(errbuf, sizeof(errbuf), "error: insn #%d jumps to insn #%d, "
+				 "which is out of range\n", i, off);
+		yyerror(scanner, parser, errbuf);
+		return -1;
 	}
-	return (uint8_t) delta;
+	return delta;
 }
 
 static int bpf_reduce_jt_jumps(yyscan_t scanner, yyparse_t parser)
@@ -596,7 +598,7 @@ static int bpf_reduce_jt_jumps(yyscan_t scanner, yyparse_t parser)
 		if (parser->labels_jt[i]) {
 			int off = bpf_find_insns_offset(scanner, parser, parser->labels_jt[i]);
 			if (off < 0) return 1;
-			parser->out[i].jt = bpf_encode_jt_jf_offset(off, i);
+			parser->out[i].jt = bpf_encode_jt_jf_offset(scanner, parser, off, i);
 		}
 	}
 
@@ -611,7 +613,7 @@ static int bpf_reduce_jf_jumps(yyscan_t scanner, yyparse_t parser)
 		if (parser->labels_jf[i]) {
 			int off = bpf_find_insns_offset(scanner, parser, parser->labels_jf[i]);
 			if (off < 0) return 1;
-			parser->out[i].jf = bpf_encode_jt_jf_offset(off, i);
+			parser->out[i].jf = bpf_encode_jt_jf_offset(scanner, parser, off, i);
 		}
 	}
 
