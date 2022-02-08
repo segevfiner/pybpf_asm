@@ -37,7 +37,7 @@ class BpfDumpType(enum.Enum):
     C_ARRAY = 2
 
 
-cdef extern from "bpf_exp.yacc.h":
+cdef extern from "bpf_exp.yacc.h" nogil:
     struct sock_filter:
         uint16_t	code   # Actual filter code
         uint8_t	    jt	   # Jump true
@@ -53,7 +53,10 @@ def assemble(str: str) -> List[Tuple[int, int, int, int]]:
     cdef char *error = NULL
 
     strbytes = str.encode()
-    result = bpf_asm_compile(strbytes, len(strbytes), &out, &error)
+    strbytes_ptr = <const char*>strbytes
+    strbytes_len = len(strbytes)
+    with nogil:
+        result = bpf_asm_compile(strbytes_ptr, strbytes_len, &out, &error)
     try:
         if not result:
             raise Error(error.decode())
