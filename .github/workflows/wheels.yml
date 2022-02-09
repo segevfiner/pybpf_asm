@@ -38,7 +38,7 @@ jobs:
         run: |
           python -m cibuildwheel --output-dir dist
         env:
-          CIBW_SKIP: 'pp* *-musllinux* *linux_i686 *linux_aarch64 *linux_ppc64le *linux_s390x'
+          CIBW_SKIP: 'pp* *-musllinux* *linux_i686'
           CIBW_BEFORE_ALL_LINUX: >
             curl -fsSL https://github.com/moparisthebest/static-curl/releases/download/v7.81.0/curl-amd64 -o /usr/local/bin/curl &&
             chmod +x /usr/local/bin/curl &&
