@@ -4,7 +4,8 @@ Welcome to pybpf_asm's documentation!
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
-   :hidden:
+
+   changelog
 
 bpf_asm
 -------
