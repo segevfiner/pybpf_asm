@@ -44,9 +44,9 @@ typedef struct yyparse_s {
 
 extern void yyerror(yyscan_t scanner, yyparse_t parser, const char *str);
 
-static void bpf_set_curr_instr(yyparse_t parser, uint16_t op, uint8_t jt, uint8_t jf, uint32_t k);
-static void bpf_set_curr_label(yyparse_t parser, char *label);
-static void bpf_set_jmp_label(yyparse_t parser, char *label, enum jmp_type type);
+static int bpf_set_curr_instr(yyscan_t scanner, yyparse_t parser, uint16_t op, uint8_t jt, uint8_t jf, uint32_t k);
+static int bpf_set_curr_label(yyscan_t scanner, yyparse_t parser, char *label);
+static int bpf_set_jmp_label(yyscan_t scanner, yyparse_t parser, char *label, enum jmp_type type);
 
 %}
 
@@ -138,382 +138,388 @@ instr
 	;
 
 labelled
-	: label ':' { bpf_set_curr_label(parser, $1); }
+	: label ':' { if (bpf_set_curr_label(scanner, parser, $1)) { YYABORT; } }
 	;
 
 ldb
 	: OP_LDB '[' 'x' '+' number ']' {
-		bpf_set_curr_instr(parser, BPF_LD | BPF_B | BPF_IND, 0, 0, $5); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_LD | BPF_B | BPF_IND, 0, 0, $5)) { YYABORT; } }
 	| OP_LDB '[' '%' 'x' '+' number ']' {
-		bpf_set_curr_instr(parser, BPF_LD | BPF_B | BPF_IND, 0, 0, $6); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_LD | BPF_B | BPF_IND, 0, 0, $6)) { YYABORT; } }
 	| OP_LDB '[' number ']' {
-		bpf_set_curr_instr(parser, BPF_LD | BPF_B | BPF_ABS, 0, 0, $3); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_LD | BPF_B | BPF_ABS, 0, 0, $3)) { YYABORT; } }
 	| OP_LDB extension {
-		bpf_set_curr_instr(parser, BPF_LD | BPF_B | BPF_ABS, 0, 0,
-				   SKF_AD_OFF + $2); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_LD | BPF_B | BPF_ABS, 0, 0,
+				   SKF_AD_OFF + $2)) { YYABORT; } }
 	;
 
 ldh
 	: OP_LDH '[' 'x' '+' number ']' {
-		bpf_set_curr_instr(parser, BPF_LD | BPF_H | BPF_IND, 0, 0, $5); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_LD | BPF_H | BPF_IND, 0, 0, $5)) { YYABORT; } }
 	| OP_LDH '[' '%' 'x' '+' number ']' {
-		bpf_set_curr_instr(parser, BPF_LD | BPF_H | BPF_IND, 0, 0, $6); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_LD | BPF_H | BPF_IND, 0, 0, $6)) { YYABORT; } }
 	| OP_LDH '[' number ']' {
-		bpf_set_curr_instr(parser, BPF_LD | BPF_H | BPF_ABS, 0, 0, $3); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_LD | BPF_H | BPF_ABS, 0, 0, $3)) { YYABORT; } }
 	| OP_LDH extension {
-		bpf_set_curr_instr(parser, BPF_LD | BPF_H | BPF_ABS, 0, 0,
-				   SKF_AD_OFF + $2); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_LD | BPF_H | BPF_ABS, 0, 0,
+				   SKF_AD_OFF + $2)) { YYABORT; } }
 	;
 
 ldi
 	: OP_LDI '#' number {
-		bpf_set_curr_instr(parser, BPF_LD | BPF_IMM, 0, 0, $3); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_LD | BPF_IMM, 0, 0, $3)) { YYABORT; } }
 	| OP_LDI number {
-		bpf_set_curr_instr(parser, BPF_LD | BPF_IMM, 0, 0, $2); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_LD | BPF_IMM, 0, 0, $2)) { YYABORT; } }
 	;
 
 ld
 	: OP_LD '#' number {
-		bpf_set_curr_instr(parser, BPF_LD | BPF_IMM, 0, 0, $3); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_LD | BPF_IMM, 0, 0, $3)) { YYABORT; } }
 	| OP_LD K_PKT_LEN {
-		bpf_set_curr_instr(parser, BPF_LD | BPF_W | BPF_LEN, 0, 0, 0); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_LD | BPF_W | BPF_LEN, 0, 0, 0)) { YYABORT; } }
 	| OP_LD extension {
-		bpf_set_curr_instr(parser, BPF_LD | BPF_W | BPF_ABS, 0, 0,
-				   SKF_AD_OFF + $2); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_LD | BPF_W | BPF_ABS, 0, 0,
+				   SKF_AD_OFF + $2)) { YYABORT; } }
 	| OP_LD 'M' '[' number ']' {
-		bpf_set_curr_instr(parser, BPF_LD | BPF_MEM, 0, 0, $4); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_LD | BPF_MEM, 0, 0, $4)) { YYABORT; } }
 	| OP_LD '[' 'x' '+' number ']' {
-		bpf_set_curr_instr(parser, BPF_LD | BPF_W | BPF_IND, 0, 0, $5); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_LD | BPF_W | BPF_IND, 0, 0, $5)) { YYABORT; } }
 	| OP_LD '[' '%' 'x' '+' number ']' {
-		bpf_set_curr_instr(parser, BPF_LD | BPF_W | BPF_IND, 0, 0, $6); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_LD | BPF_W | BPF_IND, 0, 0, $6)) { YYABORT; } }
 	| OP_LD '[' number ']' {
-		bpf_set_curr_instr(parser, BPF_LD | BPF_W | BPF_ABS, 0, 0, $3); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_LD | BPF_W | BPF_ABS, 0, 0, $3)) { YYABORT; } }
 	;
 
 ldxi
 	: OP_LDXI '#' number {
-		bpf_set_curr_instr(parser, BPF_LDX | BPF_IMM, 0, 0, $3); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_LDX | BPF_IMM, 0, 0, $3)) { YYABORT; } }
 	| OP_LDXI number {
-		bpf_set_curr_instr(parser, BPF_LDX | BPF_IMM, 0, 0, $2); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_LDX | BPF_IMM, 0, 0, $2)) { YYABORT; } }
 	;
 
 ldx
 	: OP_LDX '#' number {
-		bpf_set_curr_instr(parser, BPF_LDX | BPF_IMM, 0, 0, $3); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_LDX | BPF_IMM, 0, 0, $3)) { YYABORT; } }
 	| OP_LDX K_PKT_LEN {
-		bpf_set_curr_instr(parser, BPF_LDX | BPF_W | BPF_LEN, 0, 0, 0); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_LDX | BPF_W | BPF_LEN, 0, 0, 0)) { YYABORT; } }
 	| OP_LDX 'M' '[' number ']' {
-		bpf_set_curr_instr(parser, BPF_LDX | BPF_MEM, 0, 0, $4); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_LDX | BPF_MEM, 0, 0, $4)) { YYABORT; } }
 	| OP_LDXB number '*' '(' '[' number ']' '&' number ')' {
 		if ($2 != 4 || $9 != 0xf) {
-			fprintf(stderr, "ldxb offset not supported!\n");
-			exit(1);
+			yyerror(scanner, parser, "ldxb offset not supported!");
+			YYERROR;
 		} else {
-			bpf_set_curr_instr(parser, BPF_LDX | BPF_MSH | BPF_B, 0, 0, $6); } }
+			if (bpf_set_curr_instr(scanner, parser, BPF_LDX | BPF_MSH | BPF_B, 0, 0, $6)) { YYABORT; } } }
 	| OP_LDX number '*' '(' '[' number ']' '&' number ')' {
 		if ($2 != 4 || $9 != 0xf) {
-			fprintf(stderr, "ldxb offset not supported!\n");
-			exit(1);
+			yyerror(scanner, parser, "ldxb offset not supported!");
+			YYERROR;
 		} else {
-			bpf_set_curr_instr(parser, BPF_LDX | BPF_MSH | BPF_B, 0, 0, $6); } }
+			if (bpf_set_curr_instr(scanner, parser, BPF_LDX | BPF_MSH | BPF_B, 0, 0, $6)) { YYABORT; } } }
 	;
 
 st
 	: OP_ST 'M' '[' number ']' {
-		bpf_set_curr_instr(parser, BPF_ST, 0, 0, $4); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_ST, 0, 0, $4)) { YYABORT; } }
 	;
 
 stx
 	: OP_STX 'M' '[' number ']' {
-		bpf_set_curr_instr(parser, BPF_STX, 0, 0, $4); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_STX, 0, 0, $4)) { YYABORT; } }
 	;
 
 jmp
 	: OP_JMP label {
-		bpf_set_jmp_label(parser, $2, JKL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JA, 0, 0, 0); }
+		if (bpf_set_jmp_label(scanner, parser, $2, JKL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JA, 0, 0, 0)) { YYABORT; } }
 	;
 
 jeq
 	: OP_JEQ '#' number ',' label ',' label {
-		bpf_set_jmp_label(parser, $5, JTL);
-		bpf_set_jmp_label(parser, $7, JFL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JEQ | BPF_K, 0, 0, $3); }
+		if (bpf_set_jmp_label(scanner, parser, $5, JTL)) { YYABORT; }
+		if (bpf_set_jmp_label(scanner, parser, $7, JFL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JEQ | BPF_K, 0, 0, $3)) { YYABORT; } }
 	| OP_JEQ 'x' ',' label ',' label {
-		bpf_set_jmp_label(parser, $4, JTL);
-		bpf_set_jmp_label(parser, $6, JFL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JEQ | BPF_X, 0, 0, 0); }
+		if (bpf_set_jmp_label(scanner, parser, $4, JTL)) { YYABORT; }
+		if (bpf_set_jmp_label(scanner, parser, $6, JFL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JEQ | BPF_X, 0, 0, 0)) { YYABORT; } }
 	| OP_JEQ '%' 'x' ',' label ',' label {
-		bpf_set_jmp_label(parser, $5, JTL);
-		bpf_set_jmp_label(parser, $7, JFL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JEQ | BPF_X, 0, 0, 0); }
+		if (bpf_set_jmp_label(scanner, parser, $5, JTL)) { YYABORT; }
+		if (bpf_set_jmp_label(scanner, parser, $7, JFL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JEQ | BPF_X, 0, 0, 0)) { YYABORT; } }
 	| OP_JEQ '#' number ',' label {
-		bpf_set_jmp_label(parser, $5, JTL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JEQ | BPF_K, 0, 0, $3); }
+		if (bpf_set_jmp_label(scanner, parser, $5, JTL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JEQ | BPF_K, 0, 0, $3)) { YYABORT; } }
 	| OP_JEQ 'x' ',' label {
-		bpf_set_jmp_label(parser, $4, JTL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JEQ | BPF_X, 0, 0, 0); }
+		if (bpf_set_jmp_label(scanner, parser, $4, JTL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JEQ | BPF_X, 0, 0, 0)) { YYABORT; } }
 	| OP_JEQ '%' 'x' ',' label {
-		bpf_set_jmp_label(parser, $5, JTL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JEQ | BPF_X, 0, 0, 0); }
+		if (bpf_set_jmp_label(scanner, parser, $5, JTL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JEQ | BPF_X, 0, 0, 0)) { YYABORT; } }
 	;
 
 jneq
 	: OP_JNEQ '#' number ',' label {
-		bpf_set_jmp_label(parser, $5, JFL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JEQ | BPF_K, 0, 0, $3); }
+		if (bpf_set_jmp_label(scanner, parser, $5, JFL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JEQ | BPF_K, 0, 0, $3)) { YYABORT; } }
 	| OP_JNEQ 'x' ',' label {
-		bpf_set_jmp_label(parser, $4, JFL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JEQ | BPF_X, 0, 0, 0); }
+		if (bpf_set_jmp_label(scanner, parser, $4, JFL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JEQ | BPF_X, 0, 0, 0)) { YYABORT; } }
 	| OP_JNEQ '%' 'x' ',' label {
-		bpf_set_jmp_label(parser, $5, JFL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JEQ | BPF_X, 0, 0, 0); }
+		if (bpf_set_jmp_label(scanner, parser, $5, JFL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JEQ | BPF_X, 0, 0, 0)) { YYABORT; } }
 	;
 
 jlt
 	: OP_JLT '#' number ',' label {
-		bpf_set_jmp_label(parser, $5, JFL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGE | BPF_K, 0, 0, $3); }
+		if (bpf_set_jmp_label(scanner, parser, $5, JFL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JGE | BPF_K, 0, 0, $3)) { YYABORT; } }
 	| OP_JLT 'x' ',' label {
-		bpf_set_jmp_label(parser, $4, JFL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGE | BPF_X, 0, 0, 0); }
+		if (bpf_set_jmp_label(scanner, parser, $4, JFL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JGE | BPF_X, 0, 0, 0)) { YYABORT; } }
 	| OP_JLT '%' 'x' ',' label {
-		bpf_set_jmp_label(parser, $5, JFL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGE | BPF_X, 0, 0, 0); }
+		if (bpf_set_jmp_label(scanner, parser, $5, JFL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JGE | BPF_X, 0, 0, 0)) { YYABORT; } }
 	;
 
 jle
 	: OP_JLE '#' number ',' label {
-		bpf_set_jmp_label(parser, $5, JFL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGT | BPF_K, 0, 0, $3); }
+		if (bpf_set_jmp_label(scanner, parser, $5, JFL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JGT | BPF_K, 0, 0, $3)) { YYABORT; } }
 	| OP_JLE 'x' ',' label {
-		bpf_set_jmp_label(parser, $4, JFL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGT | BPF_X, 0, 0, 0); }
+		if (bpf_set_jmp_label(scanner, parser, $4, JFL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JGT | BPF_X, 0, 0, 0)) { YYABORT; } }
 	| OP_JLE '%' 'x' ',' label {
-		bpf_set_jmp_label(parser, $5, JFL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGT | BPF_X, 0, 0, 0); }
+		if (bpf_set_jmp_label(scanner, parser, $5, JFL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JGT | BPF_X, 0, 0, 0)) { YYABORT; } }
 	;
 
 jgt
 	: OP_JGT '#' number ',' label ',' label {
-		bpf_set_jmp_label(parser, $5, JTL);
-		bpf_set_jmp_label(parser, $7, JFL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGT | BPF_K, 0, 0, $3); }
+		if (bpf_set_jmp_label(scanner, parser, $5, JTL)) { YYABORT; }
+		if (bpf_set_jmp_label(scanner, parser, $7, JFL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JGT | BPF_K, 0, 0, $3)) { YYABORT; } }
 	| OP_JGT 'x' ',' label ',' label {
-		bpf_set_jmp_label(parser, $4, JTL);
-		bpf_set_jmp_label(parser, $6, JFL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGT | BPF_X, 0, 0, 0); }
+		if (bpf_set_jmp_label(scanner, parser, $4, JTL)) { YYABORT; }
+		if (bpf_set_jmp_label(scanner, parser, $6, JFL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JGT | BPF_X, 0, 0, 0)) { YYABORT; } }
 	| OP_JGT '%' 'x' ',' label ',' label {
-		bpf_set_jmp_label(parser, $5, JTL);
-		bpf_set_jmp_label(parser, $7, JFL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGT | BPF_X, 0, 0, 0); }
+		if (bpf_set_jmp_label(scanner, parser, $5, JTL)) { YYABORT; }
+		if (bpf_set_jmp_label(scanner, parser, $7, JFL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JGT | BPF_X, 0, 0, 0)) { YYABORT; } }
 	| OP_JGT '#' number ',' label {
-		bpf_set_jmp_label(parser, $5, JTL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGT | BPF_K, 0, 0, $3); }
+		if (bpf_set_jmp_label(scanner, parser, $5, JTL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JGT | BPF_K, 0, 0, $3)) { YYABORT; } }
 	| OP_JGT 'x' ',' label {
-		bpf_set_jmp_label(parser, $4, JTL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGT | BPF_X, 0, 0, 0); }
+		if (bpf_set_jmp_label(scanner, parser, $4, JTL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JGT | BPF_X, 0, 0, 0)) { YYABORT; } }
 	| OP_JGT '%' 'x' ',' label {
-		bpf_set_jmp_label(parser, $5, JTL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGT | BPF_X, 0, 0, 0); }
+		if (bpf_set_jmp_label(scanner, parser, $5, JTL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JGT | BPF_X, 0, 0, 0)) { YYABORT; } }
 	;
 
 jge
 	: OP_JGE '#' number ',' label ',' label {
-		bpf_set_jmp_label(parser, $5, JTL);
-		bpf_set_jmp_label(parser, $7, JFL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGE | BPF_K, 0, 0, $3); }
+		if (bpf_set_jmp_label(scanner, parser, $5, JTL)) { YYABORT; }
+		if (bpf_set_jmp_label(scanner, parser, $7, JFL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JGE | BPF_K, 0, 0, $3)) { YYABORT; } }
 	| OP_JGE 'x' ',' label ',' label {
-		bpf_set_jmp_label(parser, $4, JTL);
-		bpf_set_jmp_label(parser, $6, JFL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGE | BPF_X, 0, 0, 0); }
+		if (bpf_set_jmp_label(scanner, parser, $4, JTL)) { YYABORT; }
+		if (bpf_set_jmp_label(scanner, parser, $6, JFL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JGE | BPF_X, 0, 0, 0)) { YYABORT; } }
 	| OP_JGE '%' 'x' ',' label ',' label {
-		bpf_set_jmp_label(parser, $5, JTL);
-		bpf_set_jmp_label(parser, $7, JFL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGE | BPF_X, 0, 0, 0); }
+		if (bpf_set_jmp_label(scanner, parser, $5, JTL)) { YYABORT; }
+		if (bpf_set_jmp_label(scanner, parser, $7, JFL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JGE | BPF_X, 0, 0, 0)) { YYABORT; } }
 	| OP_JGE '#' number ',' label {
-		bpf_set_jmp_label(parser, $5, JTL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGE | BPF_K, 0, 0, $3); }
+		if (bpf_set_jmp_label(scanner, parser, $5, JTL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JGE | BPF_K, 0, 0, $3)) { YYABORT; } }
 	| OP_JGE 'x' ',' label {
-		bpf_set_jmp_label(parser, $4, JTL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGE | BPF_X, 0, 0, 0); }
+		if (bpf_set_jmp_label(scanner, parser, $4, JTL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JGE | BPF_X, 0, 0, 0)) { YYABORT; } }
 	| OP_JGE '%' 'x' ',' label {
-		bpf_set_jmp_label(parser, $5, JTL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JGE | BPF_X, 0, 0, 0); }
+		if (bpf_set_jmp_label(scanner, parser, $5, JTL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JGE | BPF_X, 0, 0, 0)) { YYABORT; } }
 	;
 
 jset
 	: OP_JSET '#' number ',' label ',' label {
-		bpf_set_jmp_label(parser, $5, JTL);
-		bpf_set_jmp_label(parser, $7, JFL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JSET | BPF_K, 0, 0, $3); }
+		if (bpf_set_jmp_label(scanner, parser, $5, JTL)) { YYABORT; }
+		if (bpf_set_jmp_label(scanner, parser, $7, JFL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JSET | BPF_K, 0, 0, $3)) { YYABORT; } }
 	| OP_JSET 'x' ',' label ',' label {
-		bpf_set_jmp_label(parser, $4, JTL);
-		bpf_set_jmp_label(parser, $6, JFL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JSET | BPF_X, 0, 0, 0); }
+		if (bpf_set_jmp_label(scanner, parser, $4, JTL)) { YYABORT; }
+		if (bpf_set_jmp_label(scanner, parser, $6, JFL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JSET | BPF_X, 0, 0, 0)) { YYABORT; } }
 	| OP_JSET '%' 'x' ',' label ',' label {
-		bpf_set_jmp_label(parser, $5, JTL);
-		bpf_set_jmp_label(parser, $7, JFL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JSET | BPF_X, 0, 0, 0); }
+		if (bpf_set_jmp_label(scanner, parser, $5, JTL)) { YYABORT; }
+		if (bpf_set_jmp_label(scanner, parser, $7, JFL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JSET | BPF_X, 0, 0, 0)) { YYABORT; } }
 	| OP_JSET '#' number ',' label {
-		bpf_set_jmp_label(parser, $5, JTL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JSET | BPF_K, 0, 0, $3); }
+		if (bpf_set_jmp_label(scanner, parser, $5, JTL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JSET | BPF_K, 0, 0, $3)) { YYABORT; } }
 	| OP_JSET 'x' ',' label {
-		bpf_set_jmp_label(parser, $4, JTL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JSET | BPF_X, 0, 0, 0); }
+		if (bpf_set_jmp_label(scanner, parser, $4, JTL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JSET | BPF_X, 0, 0, 0)) { YYABORT; } }
 	| OP_JSET '%' 'x' ',' label {
-		bpf_set_jmp_label(parser, $5, JTL);
-		bpf_set_curr_instr(parser, BPF_JMP | BPF_JSET | BPF_X, 0, 0, 0); }
+		if (bpf_set_jmp_label(scanner, parser, $5, JTL)) { YYABORT; }
+		if (bpf_set_curr_instr(scanner, parser, BPF_JMP | BPF_JSET | BPF_X, 0, 0, 0)) { YYABORT; } }
 	;
 
 add
 	: OP_ADD '#' number {
-		bpf_set_curr_instr(parser, BPF_ALU | BPF_ADD | BPF_K, 0, 0, $3); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_ALU | BPF_ADD | BPF_K, 0, 0, $3)) { YYABORT; } }
 	| OP_ADD 'x' {
-		bpf_set_curr_instr(parser, BPF_ALU | BPF_ADD | BPF_X, 0, 0, 0); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_ALU | BPF_ADD | BPF_X, 0, 0, 0)) { YYABORT; } }
 	| OP_ADD '%' 'x' {
-		bpf_set_curr_instr(parser, BPF_ALU | BPF_ADD | BPF_X, 0, 0, 0); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_ALU | BPF_ADD | BPF_X, 0, 0, 0)) { YYABORT; } }
 	;
 
 sub
 	: OP_SUB '#' number {
-		bpf_set_curr_instr(parser, BPF_ALU | BPF_SUB | BPF_K, 0, 0, $3); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_ALU | BPF_SUB | BPF_K, 0, 0, $3)) { YYABORT; } }
 	| OP_SUB 'x' {
-		bpf_set_curr_instr(parser, BPF_ALU | BPF_SUB | BPF_X, 0, 0, 0); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_ALU | BPF_SUB | BPF_X, 0, 0, 0)) { YYABORT; } }
 	| OP_SUB '%' 'x' {
-		bpf_set_curr_instr(parser, BPF_ALU | BPF_SUB | BPF_X, 0, 0, 0); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_ALU | BPF_SUB | BPF_X, 0, 0, 0)) { YYABORT; } }
 	;
 
 mul
 	: OP_MUL '#' number {
-		bpf_set_curr_instr(parser, BPF_ALU | BPF_MUL | BPF_K, 0, 0, $3); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_ALU | BPF_MUL | BPF_K, 0, 0, $3)) { YYABORT; } }
 	| OP_MUL 'x' {
-		bpf_set_curr_instr(parser, BPF_ALU | BPF_MUL | BPF_X, 0, 0, 0); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_ALU | BPF_MUL | BPF_X, 0, 0, 0)) { YYABORT; } }
 	| OP_MUL '%' 'x' {
-		bpf_set_curr_instr(parser, BPF_ALU | BPF_MUL | BPF_X, 0, 0, 0); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_ALU | BPF_MUL | BPF_X, 0, 0, 0)) { YYABORT; } }
 	;
 
 div
 	: OP_DIV '#' number {
-		bpf_set_curr_instr(parser, BPF_ALU | BPF_DIV | BPF_K, 0, 0, $3); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_ALU | BPF_DIV | BPF_K, 0, 0, $3)) { YYABORT; } }
 	| OP_DIV 'x' {
-		bpf_set_curr_instr(parser, BPF_ALU | BPF_DIV | BPF_X, 0, 0, 0); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_ALU | BPF_DIV | BPF_X, 0, 0, 0)) { YYABORT; } }
 	| OP_DIV '%' 'x' {
-		bpf_set_curr_instr(parser, BPF_ALU | BPF_DIV | BPF_X, 0, 0, 0); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_ALU | BPF_DIV | BPF_X, 0, 0, 0)) { YYABORT; } }
 	;
 
 mod
 	: OP_MOD '#' number {
-		bpf_set_curr_instr(parser, BPF_ALU | BPF_MOD | BPF_K, 0, 0, $3); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_ALU | BPF_MOD | BPF_K, 0, 0, $3)) { YYABORT; } }
 	| OP_MOD 'x' {
-		bpf_set_curr_instr(parser, BPF_ALU | BPF_MOD | BPF_X, 0, 0, 0); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_ALU | BPF_MOD | BPF_X, 0, 0, 0)) { YYABORT; } }
 	| OP_MOD '%' 'x' {
-		bpf_set_curr_instr(parser, BPF_ALU | BPF_MOD | BPF_X, 0, 0, 0); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_ALU | BPF_MOD | BPF_X, 0, 0, 0)) { YYABORT; } }
 	;
 
 neg
 	: OP_NEG {
-		bpf_set_curr_instr(parser, BPF_ALU | BPF_NEG, 0, 0, 0); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_ALU | BPF_NEG, 0, 0, 0)) { YYABORT; } }
 	;
 
 and
 	: OP_AND '#' number {
-		bpf_set_curr_instr(parser, BPF_ALU | BPF_AND | BPF_K, 0, 0, $3); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_ALU | BPF_AND | BPF_K, 0, 0, $3)) { YYABORT; } }
 	| OP_AND 'x' {
-		bpf_set_curr_instr(parser, BPF_ALU | BPF_AND | BPF_X, 0, 0, 0); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_ALU | BPF_AND | BPF_X, 0, 0, 0)) { YYABORT; } }
 	| OP_AND '%' 'x' {
-		bpf_set_curr_instr(parser, BPF_ALU | BPF_AND | BPF_X, 0, 0, 0); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_ALU | BPF_AND | BPF_X, 0, 0, 0)) { YYABORT; } }
 	;
 
 or
 	: OP_OR '#' number {
-		bpf_set_curr_instr(parser, BPF_ALU | BPF_OR | BPF_K, 0, 0, $3); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_ALU | BPF_OR | BPF_K, 0, 0, $3)) { YYABORT; } }
 	| OP_OR 'x' {
-		bpf_set_curr_instr(parser, BPF_ALU | BPF_OR | BPF_X, 0, 0, 0); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_ALU | BPF_OR | BPF_X, 0, 0, 0)) { YYABORT; } }
 	| OP_OR '%' 'x' {
-		bpf_set_curr_instr(parser, BPF_ALU | BPF_OR | BPF_X, 0, 0, 0); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_ALU | BPF_OR | BPF_X, 0, 0, 0)) { YYABORT; } }
 	;
 
 xor
 	: OP_XOR '#' number {
-		bpf_set_curr_instr(parser, BPF_ALU | BPF_XOR | BPF_K, 0, 0, $3); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_ALU | BPF_XOR | BPF_K, 0, 0, $3)) { YYABORT; } }
 	| OP_XOR 'x' {
-		bpf_set_curr_instr(parser, BPF_ALU | BPF_XOR | BPF_X, 0, 0, 0); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_ALU | BPF_XOR | BPF_X, 0, 0, 0)) { YYABORT; } }
 	| OP_XOR '%' 'x' {
-		bpf_set_curr_instr(parser, BPF_ALU | BPF_XOR | BPF_X, 0, 0, 0); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_ALU | BPF_XOR | BPF_X, 0, 0, 0)) { YYABORT; } }
 	;
 
 lsh
 	: OP_LSH '#' number {
-		bpf_set_curr_instr(parser, BPF_ALU | BPF_LSH | BPF_K, 0, 0, $3); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_ALU | BPF_LSH | BPF_K, 0, 0, $3)) { YYABORT; } }
 	| OP_LSH 'x' {
-		bpf_set_curr_instr(parser, BPF_ALU | BPF_LSH | BPF_X, 0, 0, 0); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_ALU | BPF_LSH | BPF_X, 0, 0, 0)) { YYABORT; } }
 	| OP_LSH '%' 'x' {
-		bpf_set_curr_instr(parser, BPF_ALU | BPF_LSH | BPF_X, 0, 0, 0); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_ALU | BPF_LSH | BPF_X, 0, 0, 0)) { YYABORT; } }
 	;
 
 rsh
 	: OP_RSH '#' number {
-		bpf_set_curr_instr(parser, BPF_ALU | BPF_RSH | BPF_K, 0, 0, $3); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_ALU | BPF_RSH | BPF_K, 0, 0, $3)) { YYABORT; } }
 	| OP_RSH 'x' {
-		bpf_set_curr_instr(parser, BPF_ALU | BPF_RSH | BPF_X, 0, 0, 0); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_ALU | BPF_RSH | BPF_X, 0, 0, 0)) { YYABORT; } }
 	| OP_RSH '%' 'x' {
-		bpf_set_curr_instr(parser, BPF_ALU | BPF_RSH | BPF_X, 0, 0, 0); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_ALU | BPF_RSH | BPF_X, 0, 0, 0)) { YYABORT; } }
 	;
 
 ret
 	: OP_RET 'a' {
-		bpf_set_curr_instr(parser, BPF_RET | BPF_A, 0, 0, 0); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_RET | BPF_A, 0, 0, 0)) { YYABORT; } }
 	| OP_RET '%' 'a' {
-		bpf_set_curr_instr(parser, BPF_RET | BPF_A, 0, 0, 0); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_RET | BPF_A, 0, 0, 0)) { YYABORT; } }
 	| OP_RET 'x' {
-		bpf_set_curr_instr(parser, BPF_RET | BPF_X, 0, 0, 0); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_RET | BPF_X, 0, 0, 0)) { YYABORT; } }
 	| OP_RET '%' 'x' {
-		bpf_set_curr_instr(parser, BPF_RET | BPF_X, 0, 0, 0); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_RET | BPF_X, 0, 0, 0)) { YYABORT; } }
 	| OP_RET '#' number {
-		bpf_set_curr_instr(parser, BPF_RET | BPF_K, 0, 0, $3); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_RET | BPF_K, 0, 0, $3)) { YYABORT; } }
 	;
 
 tax
 	: OP_TAX {
-		bpf_set_curr_instr(parser, BPF_MISC | BPF_TAX, 0, 0, 0); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_MISC | BPF_TAX, 0, 0, 0)) { YYABORT; } }
 	;
 
 txa
 	: OP_TXA {
-		bpf_set_curr_instr(parser, BPF_MISC | BPF_TXA, 0, 0, 0); }
+		if (bpf_set_curr_instr(scanner, parser, BPF_MISC | BPF_TXA, 0, 0, 0)) { YYABORT; } }
 	;
 
 %%
 
-static void bpf_assert_max(yyparse_t parser)
+static int bpf_assert_max(yyscan_t scanner, yyparse_t parser)
 {
 	if (parser->curr_instr >= BPF_MAXINSNS) {
-		fprintf(stderr, "only max %u insns allowed!\n", BPF_MAXINSNS);
-		exit(1);
+		char errbuf[512];
+		snprintf(errbuf, sizeof(errbuf), "only max %u insns allowed!", BPF_MAXINSNS);
+		yyerror(scanner, parser, errbuf);
+		return 1;
 	}
+
+	return 0;
 }
 
-static void bpf_set_curr_instr(yyparse_t parser, uint16_t code, uint8_t jt, uint8_t jf,
+static int bpf_set_curr_instr(yyscan_t scanner, yyparse_t parser, uint16_t code, uint8_t jt, uint8_t jf,
 			       uint32_t k)
 {
-	bpf_assert_max(parser);
+	if (bpf_assert_max(scanner, parser)) { return 1; }
 	parser->out[parser->curr_instr].code = code;
 	parser->out[parser->curr_instr].jt = jt;
 	parser->out[parser->curr_instr].jf = jf;
 	parser->out[parser->curr_instr].k = k;
 	parser->curr_instr++;
+	return 0;
 }
 
-static void bpf_set_curr_label(yyparse_t parser, char *label)
+static int bpf_set_curr_label(yyscan_t scanner, yyparse_t parser, char *label)
 {
-	bpf_assert_max(parser);
+	if (bpf_assert_max(scanner, parser)) { return 1; }
 	parser->labels[parser->curr_instr] = label;
+	return 0;
 }
 
-static void bpf_set_jmp_label(yyparse_t parser, char *label, enum jmp_type type)
+static int bpf_set_jmp_label(yyscan_t scanner, yyparse_t parser, char *label, enum jmp_type type)
 {
-	bpf_assert_max(parser);
+	if (bpf_assert_max(scanner, parser)) { return 1; }
 	switch (type) {
 	case JTL:
 		parser->labels_jt[parser->curr_instr] = label;
@@ -525,9 +531,11 @@ static void bpf_set_jmp_label(yyparse_t parser, char *label, enum jmp_type type)
 		parser->labels_k[parser->curr_instr] = label;
 		break;
 	}
+
+	return 0;
 }
 
-static int bpf_find_insns_offset(yyparse_t parser, const char *label)
+static int bpf_find_insns_offset(yyscan_t scanner, yyparse_t parser, const char *label)
 {
 	int i, max = parser->curr_instr, ret = -ENOENT;
 
@@ -539,8 +547,10 @@ static int bpf_find_insns_offset(yyparse_t parser, const char *label)
 	}
 
 	if (ret == -ENOENT) {
-		fprintf(stderr, "no such label \'%s\'!\n", label);
-		exit(1);
+		char errbuf[512];
+		snprintf(errbuf, sizeof(errbuf), "only max %u insns allowed!", BPF_MAXINSNS);
+		yyerror(scanner, parser, errbuf);
+		return ret;
 	}
 
 	return ret;
@@ -551,59 +561,71 @@ static int bpf_stage_1_insert_insns(yyscan_t scanner, yyparse_t parser)
 	return yyparse(scanner, parser);
 }
 
-static void bpf_reduce_k_jumps(yyparse_t parser)
+static int bpf_reduce_k_jumps(yyscan_t scanner, yyparse_t parser)
 {
 	int i;
 
 	for (i = 0; i < parser->curr_instr; i++) {
 		if (parser->labels_k[i]) {
-			int off = bpf_find_insns_offset(parser, parser->labels_k[i]);
+			int off = bpf_find_insns_offset(scanner, parser, parser->labels_k[i]);
+			if (off < 0) return 1;
 			parser->out[i].k = (uint32_t) (off - i - 1);
 		}
 	}
+
+	return 0;
 }
 
-static uint8_t bpf_encode_jt_jf_offset(int off, int i)
+static int bpf_encode_jt_jf_offset(yyscan_t scanner, yyparse_t parser, int off, int i)
 {
 	int delta = off - i - 1;
 
 	if (delta < 0 || delta > 255) {
-		fprintf(stderr, "error: insn #%d jumps to insn #%d, "
-				"which is out of range\n", i, off);
-		exit(1);
+		char errbuf[512];
+		snprintf(errbuf, sizeof(errbuf), "error: insn #%d jumps to insn #%d, "
+				 "which is out of range\n", i, off);
+		yyerror(scanner, parser, errbuf);
+		return -1;
 	}
-	return (uint8_t) delta;
+	return delta;
 }
 
-static void bpf_reduce_jt_jumps(yyparse_t parser)
+static int bpf_reduce_jt_jumps(yyscan_t scanner, yyparse_t parser)
 {
 	int i;
 
 	for (i = 0; i < parser->curr_instr; i++) {
 		if (parser->labels_jt[i]) {
-			int off = bpf_find_insns_offset(parser, parser->labels_jt[i]);
-			parser->out[i].jt = bpf_encode_jt_jf_offset(off, i);
+			int off = bpf_find_insns_offset(scanner, parser, parser->labels_jt[i]);
+			if (off < 0) return 1;
+			parser->out[i].jt = bpf_encode_jt_jf_offset(scanner, parser, off, i);
 		}
 	}
+
+	return 0;
 }
 
-static void bpf_reduce_jf_jumps(yyparse_t parser)
+static int bpf_reduce_jf_jumps(yyscan_t scanner, yyparse_t parser)
 {
 	int i;
 
 	for (i = 0; i < parser->curr_instr; i++) {
 		if (parser->labels_jf[i]) {
-			int off = bpf_find_insns_offset(parser, parser->labels_jf[i]);
-			parser->out[i].jf = bpf_encode_jt_jf_offset(off, i);
+			int off = bpf_find_insns_offset(scanner, parser, parser->labels_jf[i]);
+			if (off < 0) return 1;
+			parser->out[i].jf = bpf_encode_jt_jf_offset(scanner, parser, off, i);
 		}
 	}
+
+	return 0;
 }
 
-static void bpf_stage_2_reduce_labels(yyparse_t parser)
+static int bpf_stage_2_reduce_labels(yyscan_t scanner, yyparse_t parser)
 {
-	bpf_reduce_k_jumps(parser);
-	bpf_reduce_jt_jumps(parser);
-	bpf_reduce_jf_jumps(parser);
+	if (bpf_reduce_k_jumps(scanner, parser)) { return 1; }
+	if (bpf_reduce_jt_jumps(scanner, parser)) { return 1; }
+	if (bpf_reduce_jf_jumps(scanner, parser)) { return 1; }
+	return 0;
 }
 
 static void bpf_init(yyparse_t parser)
@@ -666,7 +688,7 @@ int bpf_asm_compile(const char *str, int len, struct sock_filter **out, char **e
 		result = 0;
 		goto out;
 	}
-	bpf_stage_2_reduce_labels(&parser);
+	bpf_stage_2_reduce_labels(scanner, &parser);
 
 	*out = parser.out;
 	parser.out = NULL;
@@ -684,6 +706,6 @@ void yyerror(yyscan_t scanner, yyparse_t parser, const char *str)
 {
 	int size = snprintf(NULL, 0, "error: %s at line %d", str, yyget_lineno(scanner));
 	parser->error = malloc(size + 1);
-	if (!parser->error) { abort(); };
+	if (!parser->error) { abort(); }
 	snprintf(parser->error, size + 1, "error: %s at line %d", str, yyget_lineno(scanner));
 }
