@@ -24,8 +24,8 @@ jobs:
     - name: Install
       run: |
         pip install -e .[dev]
-      env:
-        SETUPTOOLS_ENABLE_FEATURES=legacy-editable
+      env: 
+        SETUPTOOLS_ENABLE_FEATURES: legacy-editable
     - name: Build documentation
       run: |
         make html
