@@ -4,9 +4,8 @@ on:
   push:
     branches:
     - master
-  release:
-    types:
-    - published
+    tags:
+    - 'v[0-9].*'
 
 jobs:
   build_wheels:
@@ -35,6 +34,8 @@ jobs:
         uses: pypa/cibuildwheel@v2.11.2
         env:
           CIBW_SKIP: 'pp* *-musllinux* *linux_i686'
+          CIBW_ENVIRONMENT: >
+            SETUPTOOLS_ENABLE_FEATURES=legacy-editable
           CIBW_BEFORE_ALL_LINUX: >
             curl -fsSL https://github.com/moparisthebest/static-curl/releases/download/v7.81.0/curl-amd64 -o /usr/local/bin/curl &&
             chmod +x /usr/local/bin/curl &&
@@ -51,7 +52,7 @@ jobs:
         with:
           output-dir: dist
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           path: dist/*
 
@@ -59,7 +60,7 @@ jobs:
     name: Upload release
     needs: [build_wheels]
     runs-on: ubuntu-latest
-    if: github.event_name == 'release' && github.event.action == 'published'
+    if: startsWith(github.ref, 'refs/tags/')
 
     steps:
     - uses: actions/download-artifact@v3

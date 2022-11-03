@@ -54,6 +54,8 @@ jobs:
     - name: Install
       run: |
         pip install -e .[dev]
+      env: 
+        SETUPTOOLS_ENABLE_FEATURES=legacy-editable
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
