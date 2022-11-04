@@ -22,7 +22,7 @@ jobs:
       # Used to host cibuildwheel
       - uses: actions/setup-python@v4
         with:
-          version: '3.11'
+          python-version: '3.11'
 
       - name: Build sdist
         if: matrix.os == 'ubuntu-20.04'
