@@ -50,6 +50,7 @@ jobs:
           CIBW_BEFORE_ALL_MACOS: >
             brew install flex bison
           CIBW_ENVIRONMENT_MACOS: PATH="/usr/local/opt/flex/bin:/usr/local/opt/bison/bin:$PATH"
+          CIBW_ARCHS_MACOS: universal2
         with:
           output-dir: dist
 
