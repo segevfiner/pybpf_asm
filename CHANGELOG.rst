@@ -1,13 +1,25 @@
 Changelog
 =========
 
+Unreleased
+----------
+
+Added
+^^^^^
+* Python 3.12 wheels.
+* macOS universal2 wheels.
+
+Removed
+^^^^^^^
+* Python 3.6 wheels.
+
 v0.1.2 (2022-11-04)
 -------------------
 
 Added
 ^^^^^
 
-* Python 3.11, 3.12 wheels.
+* Python 3.11 wheels.
 
 v0.1.1 (2022-02-09)
 -------------------
