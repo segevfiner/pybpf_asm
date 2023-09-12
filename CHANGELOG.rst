@@ -7,7 +7,7 @@ Unreleased
 Added
 ^^^^^
 
-* Python 3.11 wheels.
+* Python 3.11, 3.12 wheels.
 
 v0.1.1 (2022-02-09)
 -------------------
