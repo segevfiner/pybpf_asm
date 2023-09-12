@@ -37,7 +37,7 @@ jobs:
           CIBW_ENVIRONMENT: >
             SETUPTOOLS_ENABLE_FEATURES=legacy-editable
           CIBW_BEFORE_ALL_LINUX: >
-            export CURL_CA_BUNDLE="/etc/pki/tls/certs/ca-bundle.crt" &&
+            ln -s /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt &&
             curl -fsSL https://github.com/moparisthebest/static-curl/releases/download/v7.81.0/curl-amd64 -o /usr/local/bin/curl &&
             chmod +x /usr/local/bin/curl &&
             /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" &&
