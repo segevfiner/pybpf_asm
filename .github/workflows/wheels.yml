@@ -31,7 +31,7 @@ jobs:
           python setup.py sdist
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.11.2
+        uses: pypa/cibuildwheel@v2.15.0
         env:
           CIBW_SKIP: 'pp* *-musllinux* *linux_i686'
           CIBW_ENVIRONMENT: >
