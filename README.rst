@@ -18,8 +18,12 @@ Based on the BPF assembler in Linux sources.
 
 Installations
 -------------
-Wheels are available. To build from source you need a relatively recent Flex & Bison. (On Windows
-you can use winflexbison, on macOS, and sometimes on Linux, you can install them from Homebrew, note that you might have to add Homebrew's version to the front of the ``PATH``, e.g. ``PATH="/usr/local/opt/flex/bin:/usr/local/opt/bison/bin:$PATH"``).
+Wheels are available.
+
+To build from source you need a relatively recent Flex & Bison:
+
+* On Windows, you can use winflexbison.
+* On macOS (and sometimes on Linux on older distributions), you can install them from Homebrew. Note that you might have to add Homebrew's version to the front of the ``PATH``, e.g. ``PATH="/usr/local/opt/flex/bin:/usr/local/opt/bison/bin:$PATH"``.
 
 Usage
 -----
