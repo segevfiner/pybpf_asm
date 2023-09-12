@@ -22,4 +22,4 @@ Based on the BPF assembler in Linux sources.
 from ._bpf_asm import *
 
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
