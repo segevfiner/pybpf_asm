@@ -27,7 +27,7 @@ jobs:
       - name: Build sdist
         if: matrix.os == 'ubuntu-20.04'
         run: |
-          pip install cython>=0.29.24 scikit-build==0.12.0
+          pip install cython>=0.29.24 scikit-build==0.13.1
           python setup.py sdist
 
       - name: Build wheels
@@ -37,8 +37,7 @@ jobs:
           CIBW_ENVIRONMENT: >
             SETUPTOOLS_ENABLE_FEATURES=legacy-editable
           CIBW_BEFORE_ALL_LINUX: >
-            curl -fsSL https://github.com/moparisthebest/static-curl/releases/download/v7.81.0/curl-amd64 -o /usr/local/bin/curl &&
-            chmod +x /usr/local/bin/curl &&
+            yum install curl &&
             /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" &&
             brew install flex bison
           CIBW_ENVIRONMENT_LINUX: PATH="/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:$PATH"
