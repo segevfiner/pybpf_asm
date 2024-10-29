@@ -19,7 +19,7 @@ jobs:
         include:
         - os: windows-latest
           python-version: '3.12'
-        - os: macos-latest
+        - os: macos-13
           python-version: '3.12'
 
     steps:
