@@ -3,7 +3,7 @@ requires = ["scikit-build-core", "cython>=3.0", "cython-cmake"]
 build-backend = "scikit_build_core.build"
 
 [project]
-name = "pybpf_asm"
+name = "bpf-asm"
 dynamic = ["version"]
 authors = [{ name = "Segev Finer", email = "segev208@gmail.com" }]
 description = "Python BPF Assembler"
