@@ -1,6 +1,13 @@
 Changelog
 =========
 
+v0.1.5 (2026-08-21)
+-------------------
+Changed
+^^^^^^^
+* Adjusted Python versions supported.
+* Migrated to scikit-build-core.
+
 v0.1.4 (2024-11-02)
 -------------------
 Added
