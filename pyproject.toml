@@ -1,3 +1,50 @@
 [build-system]
-requires = ["setuptools>=59.0", "scikit-build>=0.17.6", "cmake", "ninja; sys_platform != 'win32'", "cython"]
-build-backend = "setuptools.build_meta"
+requires = ["scikit-build-core", "cython", "cython-cmake"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "pybpf_asm"
+dynamic = ["version"]
+authors = [{ name = "Segev Finer", email = "segev208@gmail.com" }]
+description = "Python BPF Assembler"
+keywords = ["bpf"]
+license = "GPL-2.0-only"
+license-files = ["LICENSE"]
+readme = "README.rst"
+requires-python = ">=3.9"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: System :: Networking :: Monitoring",
+    "Programming Language :: Cython",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+
+[project.urls]
+homepage = "https://github.com/segevfiner/pybpf_asm"
+documentation = "https://segevfiner.github.io/pybpf_asm/"
+issues = "https://github.com/segevfiner/pybpf_asm/issues"
+
+[project.scripts]
+pybpf_asm = "bpf_asm.__main__:main"
+
+[project.optional-dependencies]
+dev = [
+    "flake8",
+    "pytest",
+    "sphinx==9.*"
+]
+
+[tool.scikit-build]
+wheel.packages = ["bpf_asm"]
+
+[[tool.dynamic-metadata]]
+provider = "scikit_build_core.metadata.regex"
+field = "version"
+input = "bpf_asm/__init__.py"
