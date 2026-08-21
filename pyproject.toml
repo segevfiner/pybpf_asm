@@ -41,9 +41,6 @@ dev = [
     "sphinx==9.*; python_version >= '3.12'",
 ]
 
-[tool.scikit-build]
-wheel.packages = ["bpf_asm"]
-
 [[tool.dynamic-metadata]]
 provider = "scikit_build_core.metadata.regex"
 field = "version"
