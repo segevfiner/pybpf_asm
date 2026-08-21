@@ -6,7 +6,7 @@ on:
     - master
     tags:
     - 'v[0-9].*'
-    workflow_dispatch:
+  workflow_dispatch:
 
 jobs:
   build_wheels:
@@ -15,28 +15,26 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-20.04, windows-2019, macos-12]
+        os: [ubuntu-22.04, windows-2022, macos-15-intel]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Used to host cibuildwheel
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
-          python-version: '3.12'
+          python-version: '3.14'
 
       - name: Build sdist
-        if: matrix.os == 'ubuntu-20.04'
+        if: matrix.os == 'ubuntu-22.04'
         run: |
           pip install build
           python -m build --sdist
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.21.3
+        uses: pypa/cibuildwheel@v4.2.0
         env:
-          CIBW_SKIP: 'cp36-* pp* *-musllinux* *linux_i686'
-          CIBW_ENVIRONMENT: >
-            SETUPTOOLS_ENABLE_FEATURES=legacy-editable
+          CIBW_SKIP: '*t-* *-musllinux* *linux_i686'
           CIBW_BEFORE_ALL_LINUX: >
             ln -s /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/ca-certificates.crt &&
             curl -fsSL https://github.com/moparisthebest/static-curl/releases/download/v7.81.0/curl-amd64 -o /usr/local/bin/curl &&
@@ -55,7 +53,7 @@ jobs:
         with:
           output-dir: dist
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: wheels-${{ matrix.os }}
           path: dist/*
@@ -67,14 +65,14 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
 
     steps:
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@v8
       with:
         pattern: wheels-*
         merge-multiple: true
         path: dist
 
     - name: Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v3
       with:
         draft: true
         files: dist/*

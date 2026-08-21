@@ -15,17 +15,17 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12', '3.13']
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
         include:
         - os: windows-latest
-          python-version: '3.12'
-        - os: macos-13
-          python-version: '3.12'
+          python-version: '3.14'
+        - os: macos-15-intel
+          python-version: '3.14'
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
@@ -33,8 +33,7 @@ jobs:
         python -m pip install --upgrade pip setuptools wheel
     - name: Set up Homebrew
       if: ${{ runner.os == 'Linux' }}
-      id: set-up-homebrew
-      uses: Homebrew/actions/setup-homebrew@master
+      uses: Homebrew/actions/setup-homebrew@2026.08.14.1
     - name: Install depdencecies (Linux)
       if: ${{ runner.os == 'Linux' }}
       run: |
@@ -54,10 +53,7 @@ jobs:
     - name: Install
       run: |
         pip install -e .[dev]
-      env: 
-        SETUPTOOLS_ENABLE_FEATURES: legacy-editable
     - name: Lint with flake8
-      if: ${{ matrix.python-version != '3.7' }}
       run: |
         # stop the build if there are Python syntax errors or undefined names
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
