@@ -38,7 +38,7 @@ pybpf_asm = "bpf_asm.__main__:main"
 dev = [
     "flake8",
     "pytest",
-    "sphinx==9.*"
+    "sphinx==9.*; python_version >= '3.12'",
 ]
 
 [tool.scikit-build]
